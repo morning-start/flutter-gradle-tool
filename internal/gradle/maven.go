@@ -1,10 +1,10 @@
 package gradle
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
-	apperrors "flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/mirror"
 )
 
@@ -13,22 +13,31 @@ const mavenMarker = "// Added by fgt"
 var repositoriesLinePattern = regexp.MustCompile(`^(\s*)repositories\s*\{\s*$`)
 var markerLinePattern = regexp.MustCompile(`^\s*// Added by fgt\s*$`)
 var mavenLinePattern = regexp.MustCompile(`^\s*maven\s*\{\s*url\s+['"][^'"]+['"]\s*\}\s*$`)
+var mavenKTSLinePattern = regexp.MustCompile(`^\s*maven\s*\(\s*url\s*=\s*uri\(\s*["'][^"']+["']\s*\)\s*\)\s*$`)
 
 func RewriteBuildGradle(content string, source mirror.Source) (string, bool, error) {
+	return rewriteBuildGradle(content, source, false)
+}
+
+func RewriteBuildGradleKTS(content string, source mirror.Source) (string, bool, error) {
+	return rewriteBuildGradle(content, source, true)
+}
+
+func rewriteBuildGradle(content string, source mirror.Source, kotlin bool) (string, bool, error) {
 	lines, lineEnding := splitLines(content)
-	strippedLines, stripped := stripMavenBlocks(lines)
+	strippedLines, stripped := stripMavenBlocks(lines, kotlin)
 
 	if source.MavenURL == "" {
 		updated := joinLines(strippedLines, lineEnding)
 		return updated, stripped, nil
 	}
 
-	injectedLines := injectMavenBlocks(strippedLines, source.MavenURL)
+	injectedLines := injectMavenBlocks(strippedLines, source.MavenURL, kotlin)
 	updated := joinLines(injectedLines, lineEnding)
 	return updated, updated != content, nil
 }
 
-func stripMavenBlocks(lines []string) ([]string, bool) {
+func stripMavenBlocks(lines []string, kotlin bool) ([]string, bool) {
 	var out []string
 	changed := false
 
@@ -40,7 +49,7 @@ func stripMavenBlocks(lines []string) ([]string, bool) {
 		}
 
 		changed = true
-		if i+1 < len(lines) && mavenLinePattern.MatchString(strings.TrimRight(lines[i+1], "\r")) {
+		if i+1 < len(lines) && mavenLinePatternFor(kotlin).MatchString(strings.TrimRight(lines[i+1], "\r")) {
 			i++
 		}
 	}
@@ -48,7 +57,7 @@ func stripMavenBlocks(lines []string) ([]string, bool) {
 	return out, changed
 }
 
-func injectMavenBlocks(lines []string, mavenURL string) []string {
+func injectMavenBlocks(lines []string, mavenURL string, kotlin bool) []string {
 	var out []string
 
 	for i := 0; i < len(lines); i++ {
@@ -62,10 +71,24 @@ func injectMavenBlocks(lines []string, mavenURL string) []string {
 
 		indent := matches[1]
 		out = append(out, indent+"    "+mavenMarker)
-		out = append(out, indent+"    maven { url '"+mavenURL+"' }")
+		out = append(out, indent+"    "+mavenSnippet(mavenURL, kotlin))
 	}
 
 	return out
+}
+
+func mavenLinePatternFor(kotlin bool) *regexp.Regexp {
+	if kotlin {
+		return mavenKTSLinePattern
+	}
+	return mavenLinePattern
+}
+
+func mavenSnippet(mavenURL string, kotlin bool) string {
+	if kotlin {
+		return fmt.Sprintf(`maven(url = uri("%s"))`, mavenURL)
+	}
+	return fmt.Sprintf("maven { url '%s' }", mavenURL)
 }
 
 func splitLines(content string) ([]string, string) {
@@ -82,11 +105,4 @@ func joinLines(lines []string, lineEnding string) string {
 
 func BuildGradleHasMirror(content string) bool {
 	return strings.Contains(content, mavenMarker)
-}
-
-func EnsureSupportedDSL(content string) error {
-	if strings.Contains(content, "build.gradle.kts") {
-		return apperrors.New(apperrors.ExitUnknownCommand, "kotlin dsl is not supported yet")
-	}
-	return nil
 }

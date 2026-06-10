@@ -80,7 +80,7 @@ related_docs:
 - [x] `internal/gradle/wrapper.go` — URL 解析与重构
 - [x] `internal/gradle/maven.go` — Maven 镜像注入
 - [x] `init` 子命令完整实现
-- [ ] `build.gradle.kts` 支持规划（延后到 P4）
+- [x] `build.gradle.kts` 支持完成（Groovy/Kotlin DSL 均已覆盖）
 
 ---
 

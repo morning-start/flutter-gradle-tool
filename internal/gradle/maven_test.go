@@ -93,3 +93,68 @@ func TestRewriteBuildGradleRemovesMirror(t *testing.T) {
 		t.Fatalf("RewriteBuildGradle() still contains marker:\n%s", got)
 	}
 }
+
+func TestRewriteBuildGradleKTSInjectsMirror(t *testing.T) {
+	t.Parallel()
+
+	got, changed, err := RewriteBuildGradleKTS(sampleBuildGradleKTS, mirror.Source{
+		Name:     "aliyun",
+		MavenURL: "https://maven.aliyun.com/repository/public",
+	})
+	if err != nil {
+		t.Fatalf("RewriteBuildGradleKTS() error = %v", err)
+	}
+	if !changed {
+		t.Fatalf("RewriteBuildGradleKTS() changed = false, want true")
+	}
+
+	if strings.Count(got, "Added by fgt") != 2 {
+		t.Fatalf("RewriteBuildGradleKTS() marker count = %d, want 2", strings.Count(got, "Added by fgt"))
+	}
+	if !strings.Contains(got, `maven(url = uri("https://maven.aliyun.com/repository/public"))`) {
+		t.Fatalf("RewriteBuildGradleKTS() missing maven mirror block:\n%s", got)
+	}
+}
+
+func TestRewriteBuildGradleKTSRemovesMirror(t *testing.T) {
+	t.Parallel()
+
+	withMirror, _, err := RewriteBuildGradleKTS(sampleBuildGradleKTS, mirror.Source{
+		Name:     "aliyun",
+		MavenURL: "https://maven.aliyun.com/repository/public",
+	})
+	if err != nil {
+		t.Fatalf("initial RewriteBuildGradleKTS() error = %v", err)
+	}
+
+	got, changed, err := RewriteBuildGradleKTS(withMirror, mirror.Source{Name: "official"})
+	if err != nil {
+		t.Fatalf("RewriteBuildGradleKTS() error = %v", err)
+	}
+	if !changed {
+		t.Fatalf("RewriteBuildGradleKTS() changed = false, want true")
+	}
+	if strings.Contains(got, "Added by fgt") {
+		t.Fatalf("RewriteBuildGradleKTS() still contains marker:\n%s", got)
+	}
+}
+
+const sampleBuildGradleKTS = `
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id("com.android.application")
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+`

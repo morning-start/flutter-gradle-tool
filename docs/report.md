@@ -265,8 +265,8 @@ var BuiltinSources = []MirrorSource{
 
 - 应能识别之前由工具添加的镜像配置，避免重复插入。
 - 使用标记注释（如 `// Added by fgt`）来定位和更新，而非每次都简单追加。
-- 对于 Kotlin DSL（`build.gradle.kts`），初期可仅支持 Groovy DSL，后续扩展。应设计接口以便后期增加 DSL 支持。
-- 如果 `build.gradle` 不存在，应提示但不应阻断流程（部分项目可能使用 `.kts`）。
+- `build.gradle.kts` 与 `build.gradle` 都应支持。实现上按文件后缀分发到对应解析器，避免把 Groovy 语法写入 Kotlin DSL。
+- 如果某个 DSL 文件不存在，应继续尝试同目录下的另一种 DSL 文件，不应因为缺少一个文件而阻断初始化流程。
 
 ### 3.6 交互式选择实现
 

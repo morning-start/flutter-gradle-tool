@@ -233,6 +233,8 @@ func rewriteWrapperFile(projectDir string, source mirror.Source) error {
 
 func rewriteBuildGradleFile(projectDir string, source mirror.Source) error {
 	path, err := firstExistingPath(
+		filepath.Join(projectDir, "android", "build.gradle.kts"),
+		filepath.Join(projectDir, "build.gradle.kts"),
 		filepath.Join(projectDir, "android", "build.gradle"),
 		filepath.Join(projectDir, "build.gradle"),
 	)
@@ -245,7 +247,15 @@ func rewriteBuildGradleFile(projectDir string, source mirror.Source) error {
 		return fmt.Errorf("read build.gradle: %w", err)
 	}
 
-	updated, changed, err := gradle.RewriteBuildGradle(string(content), source)
+	var (
+		updated string
+		changed bool
+	)
+	if strings.HasSuffix(path, ".kts") {
+		updated, changed, err = gradle.RewriteBuildGradleKTS(string(content), source)
+	} else {
+		updated, changed, err = gradle.RewriteBuildGradle(string(content), source)
+	}
 	if err != nil {
 		return err
 	}

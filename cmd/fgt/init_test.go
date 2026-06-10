@@ -67,6 +67,28 @@ func TestInitOfficialRemovesMavenBlocks(t *testing.T) {
 	}
 }
 
+func TestInitRewritesBuildGradleKTS(t *testing.T) {
+	projectDir := t.TempDir()
+	writeFlutterProjectFilesKTS(t, projectDir)
+
+	out := &bytes.Buffer{}
+	cmd := newRootCommand()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", projectDir, "init", "--source", "aliyun"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("init returned error: %v\noutput:\n%s", err, out.String())
+	}
+
+	buildGradleKTS := readTestFile(t, filepath.Join(projectDir, "android", "build.gradle.kts"))
+	if strings.Count(buildGradleKTS, "Added by fgt") != 1 {
+		t.Fatalf("build.gradle.kts marker count = %d, want 1\n%s", strings.Count(buildGradleKTS, "Added by fgt"), buildGradleKTS)
+	}
+	if !strings.Contains(buildGradleKTS, `maven(url = uri("https://maven.aliyun.com/repository/public"))`) {
+		t.Fatalf("build.gradle.kts missing maven mirror block:\n%s", buildGradleKTS)
+	}
+}
+
 func writeFlutterProjectFiles(t *testing.T, projectDir string) {
 	t.Helper()
 
@@ -97,6 +119,36 @@ allprojects {
 `
 	if err := os.WriteFile(filepath.Join(projectDir, "android", "build.gradle"), []byte(buildGradleContent), 0o644); err != nil {
 		t.Fatalf("WriteFile() build.gradle error = %v", err)
+	}
+}
+
+func writeFlutterProjectFilesKTS(t *testing.T, projectDir string) {
+	t.Helper()
+
+	wrapperDir := filepath.Join(projectDir, "android", "gradle", "wrapper")
+	if err := os.MkdirAll(wrapperDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	wrapperContent := "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-all.zip\n"
+	if err := os.WriteFile(filepath.Join(wrapperDir, "gradle-wrapper.properties"), []byte(wrapperContent), 0o644); err != nil {
+		t.Fatalf("WriteFile() wrapper error = %v", err)
+	}
+
+	buildGradleKTSContent := `
+plugins {
+    id("com.android.application")
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+`
+	if err := os.WriteFile(filepath.Join(projectDir, "android", "build.gradle.kts"), []byte(buildGradleKTSContent), 0o644); err != nil {
+		t.Fatalf("WriteFile() build.gradle.kts error = %v", err)
 	}
 }
 
