@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	apperrors "flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/gradle"
 	"flutter-gradle-tool/internal/mirror"
 )
@@ -23,7 +24,7 @@ type Report struct {
 
 func Check(projectDir string) (Report, error) {
 	if _, err := os.Stat(projectDir); err != nil {
-		return Report{}, fmt.Errorf("project dir not found: %w", err)
+		return Report{}, apperrors.Wrap(apperrors.ExitProjectNotFound, "project dir not found", err)
 	}
 
 	report := Report{ProjectDir: projectDir}
@@ -120,7 +121,7 @@ func loadFirstExisting(paths ...string) (string, string, error) {
 			return path, string(data), nil
 		}
 	}
-	return "", "", fmt.Errorf("file not found")
+	return "", "", apperrors.New(apperrors.ExitProjectNotFound, "file not found")
 }
 
 func extractURL(content string) string {

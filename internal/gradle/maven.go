@@ -1,10 +1,10 @@
 package gradle
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
+	apperrors "flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/mirror"
 )
 
@@ -86,7 +86,7 @@ func BuildGradleHasMirror(content string) bool {
 
 func EnsureSupportedDSL(content string) error {
 	if strings.Contains(content, "build.gradle.kts") {
-		return fmt.Errorf("kotlin dsl is not supported yet")
+		return apperrors.New(apperrors.ExitUnknownCommand, "kotlin dsl is not supported yet")
 	}
 	return nil
 }

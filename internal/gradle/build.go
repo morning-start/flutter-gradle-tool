@@ -1,16 +1,17 @@
 package gradle
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	apperrors "flutter-gradle-tool/internal/errors"
 )
 
 func RunGradle(projectDir string, tasks []string) (string, error) {
 	if len(tasks) == 0 {
-		return "", fmt.Errorf("at least one gradle task is required")
+		return "", apperrors.New(apperrors.ExitUnknownCommand, "at least one gradle task is required")
 	}
 
 	wrapperDir, wrapperName, err := findWrapper(projectDir)
@@ -29,7 +30,7 @@ func RunGradle(projectDir string, tasks []string) (string, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(output), fmt.Errorf("gradle exec failed: %w", err)
+		return string(output), apperrors.Wrap(apperrors.ExitUnknownCommand, "gradle exec failed", err)
 	}
 	return string(output), nil
 }
@@ -54,7 +55,7 @@ func findWrapper(projectDir string) (string, string, error) {
 		}
 	}
 
-	return "", "", fmt.Errorf("gradle wrapper not found")
+	return "", "", apperrors.New(apperrors.ExitProjectNotFound, "gradle wrapper not found")
 }
 
 func fileExists(path string) bool {

@@ -171,13 +171,13 @@ related_docs:
 
 ### 8. 错误处理体系（P1 · 1 天）
 
-- [ ] **8.1 定义退出码常量** — 在 `internal/errors/exitcode.go` 中定义命名常量（ErrProjectNotFound=1、ErrWrapperParse=2 等）
+- [x] **8.1 定义退出码常量** — 在 `internal/errors/exitcode.go` 中定义命名常量（ErrProjectNotFound=1、ErrWrapperParse=2 等）
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **8.2 实现统一错误输出** — 封装 `ExitWithError(code int, msg string)` 函数，输出错误信息并退出
+- [x] **8.2 实现统一错误输出** — 封装 `ExitWithError(code int, msg string)` 函数，输出错误信息并退出
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **8.3 注册全局 PersistentPreRunE** — 在根命令中校验 `--project-dir` 指向的目录是否存在
+- [x] **8.3 注册全局 PersistentPreRunE** — 在根命令中校验 `--project-dir` 指向的目录是否存在
   - 依赖：2.5
   - 负责人：@dev
   - 预估：1h
@@ -194,6 +194,17 @@ related_docs:
   - `fgt --project-dir /not/exist` 报错目录不存在
 - [ ] **9.2 代码审查** — 检查所有代码符合 Go 风格、错误处理一致、无未处理的 error
 - [ ] **9.3 阶段评审** — 确认 P1 退出条件全部满足，记录经验教训
+
+### 11. 退出码收口（P5 · 0.5 天）
+
+- [x] **11.1 统一命令退出码** — `main` 按错误类型返回明确退出码
+  - 依赖：8.1、8.2
+  - 负责人：@dev
+  - 预估：1h
+- [x] **11.2 单元测试 — 退出码映射** — 覆盖 AppError 与普通 error
+  - 依赖：11.1
+  - 负责人：@dev
+  - 预估：0.5h
 
 ### 10. 镜像测速（P4 · 0.5 天）
 

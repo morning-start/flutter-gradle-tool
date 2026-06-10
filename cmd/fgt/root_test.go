@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	apperrors "flutter-gradle-tool/internal/errors"
 )
 
 func TestMirrorSetAndCurrent(t *testing.T) {
@@ -144,6 +146,22 @@ func TestCacheCleanAndExec(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "wrapper:build") {
 		t.Fatalf("exec output missing wrapper marker:\n%s", out.String())
+	}
+}
+
+func TestInvalidProjectDirReturnsExitCode(t *testing.T) {
+	out := &bytes.Buffer{}
+	cmd := newRootCommand()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", filepath.Join(t.TempDir(), "missing"), "doctor"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for missing project dir")
+	}
+
+	if got := exitCode(err); got != apperrors.ExitProjectNotFound {
+		t.Fatalf("exitCode() = %d, want %d", got, apperrors.ExitProjectNotFound)
 	}
 }
 

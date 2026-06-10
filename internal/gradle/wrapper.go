@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	apperrors "flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/mirror"
 )
 
@@ -13,7 +14,7 @@ var wrapperPattern = regexp.MustCompile(`(?m)^distributionUrl\s*=\s*(.+/gradle-(
 func ParseWrapperDistributionURL(content string) (string, string, error) {
 	matches := wrapperPattern.FindStringSubmatch(normalizeWrapperContent(content))
 	if len(matches) != 4 {
-		return "", "", fmt.Errorf("distributionUrl is invalid")
+		return "", "", apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
 	}
 	return matches[2], matches[3], nil
 }
@@ -22,7 +23,7 @@ func RewriteWrapperProperties(content string, source mirror.Source) (string, boo
 	normalized := normalizeWrapperContent(content)
 	matches := wrapperPattern.FindStringSubmatch(normalized)
 	if len(matches) != 4 {
-		return "", false, fmt.Errorf("distributionUrl is invalid")
+		return "", false, apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
 	}
 
 	version := matches[2]

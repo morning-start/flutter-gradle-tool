@@ -13,6 +13,7 @@ import (
 
 	"flutter-gradle-tool/internal/cache"
 	"flutter-gradle-tool/internal/doctor"
+	"flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/gradle"
 	"flutter-gradle-tool/internal/mirror"
 )
@@ -33,6 +34,12 @@ func newRootCommand() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if _, err := os.Stat(projectDir); err != nil {
+				return errors.Wrap(errors.ExitProjectNotFound, "project dir not found", err)
+			}
+			return nil
+		},
 	}
 
 	cmd.PersistentFlags().StringVar(&projectDir, "project-dir", ".", "Path to Flutter project root")
@@ -51,7 +58,7 @@ func newPlaceholderCommand(name string) *cobra.Command {
 		Use:   name,
 		Short: fmt.Sprintf("%s command placeholder", name),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return fmt.Errorf("%s command is not implemented yet", name)
+			return errors.New(errors.ExitUnknownCommand, fmt.Sprintf("%s command is not implemented yet", name))
 		},
 	}
 }
@@ -63,7 +70,7 @@ func newDoctorCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report, err := doctor.Check(projectDir)
 			if err != nil {
-				return err
+				return errors.Wrap(errors.ExitProjectNotFound, "doctor failed", err)
 			}
 			_, _ = fmt.Fprint(cmd.OutOrStdout(), doctor.Format(report))
 			return nil
@@ -80,7 +87,7 @@ func newCacheCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			info, err := cache.Inspect()
 			if err != nil {
-				return err
+				return errors.Wrap(errors.ExitProjectNotFound, "cache inspection failed", err)
 			}
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "root: %s\n", info.Root)
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "size: %d\n", info.TotalSize)
@@ -93,11 +100,11 @@ func newCacheCommand() *cobra.Command {
 		Short: "Clean Gradle cache directories",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cleanAll {
-				return fmt.Errorf("use --all to remove cache directories")
+				return errors.New(errors.ExitUnknownCommand, "use --all to remove cache directories")
 			}
 			removed, err := cache.CleanAll()
 			if err != nil {
-				return err
+				return errors.Wrap(errors.ExitProjectNotFound, "cache clean failed", err)
 			}
 			for _, target := range removed {
 				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "removed: %s\n", target)
@@ -140,10 +147,10 @@ func newInitCommand() *cobra.Command {
 		Short: "Initialize Gradle mirror settings for a Flutter project",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ciMode && sourceName == "" {
-				return fmt.Errorf("--ci requires --source")
+				return errors.New(errors.ExitCIRequiresSource, "--ci requires --source")
 			}
 			if interactive {
-				return fmt.Errorf("interactive init is not implemented yet")
+				return errors.New(errors.ExitUnknownCommand, "interactive init is not implemented yet")
 			}
 
 			source, err := resolveInitSource(projectDir, sourceName)
@@ -180,7 +187,7 @@ func resolveInitSource(projectDir, sourceName string) (*mirror.Source, error) {
 	if sourceName != "" {
 		source := mirror.FindByName(sourceName)
 		if source == nil {
-			return nil, fmt.Errorf("unknown mirror source: %s", sourceName)
+			return nil, errors.New(errors.ExitUnknownSource, fmt.Sprintf("unknown mirror source: %s", sourceName))
 		}
 		return source, nil
 	}
@@ -346,7 +353,7 @@ func resolveMirrorSetSource(cmd *cobra.Command, sourceName string, interactive b
 	}
 
 	if !interactive {
-		return nil, fmt.Errorf("--source is required")
+		return nil, errors.New(errors.ExitCIRequiresSource, "--source is required")
 	}
 
 	return chooseMirrorSourceInteractively(cmd)
@@ -373,12 +380,12 @@ func chooseMirrorSourceInteractively(cmd *cobra.Command) (*mirror.Source, error)
 	}
 	choiceLine = strings.TrimSpace(choiceLine)
 	if choiceLine == "" {
-		return nil, fmt.Errorf("selection is required")
+		return nil, errors.New(errors.ExitUnknownCommand, "selection is required")
 	}
 
 	index, err := strconv.Atoi(choiceLine)
 	if err != nil || index < 1 || index > len(mirror.BuiltinSources) {
-		return nil, fmt.Errorf("invalid selection: %s", choiceLine)
+		return nil, errors.New(errors.ExitUnknownSource, fmt.Sprintf("invalid selection: %s", choiceLine))
 	}
 
 	selected := mirror.BuiltinSources[index-1]
@@ -389,7 +396,7 @@ func chooseMirrorSourceInteractively(cmd *cobra.Command) (*mirror.Source, error)
 	}
 	confirmLine = strings.TrimSpace(strings.ToLower(confirmLine))
 	if confirmLine != "y" && confirmLine != "yes" {
-		return nil, fmt.Errorf("selection cancelled")
+		return nil, errors.New(errors.ExitUnknownCommand, "selection cancelled")
 	}
 
 	return &selected, nil

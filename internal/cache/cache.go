@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
+
+	apperrors "flutter-gradle-tool/internal/errors"
 )
 
 type Info struct {
@@ -58,7 +59,7 @@ func CleanAll() ([]string, error) {
 	for _, target := range targets {
 		if _, err := os.Stat(target); err == nil {
 			if err := os.RemoveAll(target); err != nil {
-				return removed, fmt.Errorf("remove %s: %w", target, err)
+				return removed, apperrors.Wrap(apperrors.ExitPermission, fmt.Sprintf("remove %s", target), err)
 			}
 			removed = append(removed, target)
 		}
@@ -89,6 +90,5 @@ func dirSize(root string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	_ = runtime.GOOS
 	return total, nil
 }
