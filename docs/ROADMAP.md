@@ -119,8 +119,8 @@ related_docs:
 **交付物**：
 - [x] `mirror test` 子命令
 - [x] 交互式选择 UI 优化（可选引入 promptui）
-- [ ] GitHub Actions CI/CD 配置
-- [ ] GitHub Releases 发布脚本
+- [x] GitHub Actions CI/CD 配置
+- [x] GoReleaser 发布配置
 - [ ] 用户文档（README、使用示例）
 
 ### P5：退出码与流程收口（第 12 周）
