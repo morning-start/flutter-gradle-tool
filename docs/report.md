@@ -1,4 +1,23 @@
+---
+title: Flutter Gradle 加速工具方案报告
+doc_type: report
+version: 0.2.0
+status: draft
+updated: 2026-06-10
+related_docs:
+  - ROADMAP.md
+  - TODO.md
+  - tech-decision.md
+---
+
 # 报告：Flutter Gradle 加速工具 —— 基于 Go 的二进制 CLI 方案
+
+## 文档关系
+
+- [ROADMAP.md](ROADMAP.md)：定义阶段目标、里程碑和风险。
+- [TODO.md](TODO.md)：定义当前 P1 阶段的执行清单和依赖关系。
+- [tech-decision.md](tech-decision.md)：定义库选型与自研边界。
+- 本文档：定义产品定位、功能边界、实现约束和验收依据。
 
 ## 1. 项目背景
 
@@ -81,7 +100,7 @@ Flutter 项目在构建 Android 版本时，依赖 Gradle 构建系统。整个�
 ### 2.4 命令行接口设计
 
 ```bash
-flutter-gradle-tool mirror [subcommand] [flags]
+fgt mirror [subcommand] [flags]
 
 Subcommands:
   list            List all available mirror sources (with current selection marked)
@@ -169,11 +188,13 @@ flutter-gradle-tool/
 │   │   ├── source.go                 # 镜像源数据结构 + 内置列表
 │   │   ├── set.go                    # 切换镜像核心逻辑
 │   │   ├── test.go                   # 镜像源测速逻辑
-│   │   └── manager.go                # 读写 .fgt-mirror 持久化文件
+│   │   └── manager.go                # 读写 .fgt-config 持久化文件
 │   ├── gradle/
 │   │   ├── wrapper.go                # 解析/修改 gradle-wrapper.properties
 │   │   ├── maven.go                  # 修改 build.gradle 镜像配置
 │   │   └── build.go                  # exec 功能，自动检测平台选择 gradlew/gradlew.bat
+│   ├── errors/
+│   │   └── exitcode.go               # 统一退出码定义
 │   ├── doctor/
 │   │   └── doctor.go                 # 诊断逻辑
 │   └── cache/
@@ -213,7 +234,7 @@ var BuiltinSources = []MirrorSource{
 | 依赖                             | 用途         | 备注                                |
 | -------------------------------- | ------------ | ----------------------------------- |
 | `github.com/spf13/cobra`         | CLI 框架     | 子命令路由、标志解析                |
-| `github.com/manifoldco/promptui` | 交互式选择   | 镜像源选择菜单                      |
+| `github.com/manifoldco/promptui` | 交互式选择   | 可选增强，用于更复杂的镜像选择体验  |
 | `go.uber.org/zap` / `log`        | 日志输出     | 可考虑标准库 log 以减小体积         |
 | 标准库 `net/http`                | HTTP 请求    | 镜像源测速                          |
 | 标准库 `os/exec`                 | 外部命令执行 | `exec` 子命令调用 gradlew           |
@@ -249,12 +270,12 @@ var BuiltinSources = []MirrorSource{
 
 ### 3.6 交互式选择实现
 
-使用 `github.com/manifoldco/promptui` 或标准库 `bufio` 读取输入。提供序号列表让用户选择镜像源，并显示当前使用的源。
+优先使用标准库 `bufio`/`fmt` 实现简单菜单。若后续需要搜索、分页或更复杂的展示，可再引入 `github.com/manifoldco/promptui`。
 
 **约束**：
 
 - 在 `--ci` 模式下必须禁用交互，如果缺少 `--source` 参数则报错退出（退出码 1）。
-- 交互式提示应包含镜像源的简要测速结果（如果实现了测速功能）。
+- 交互式提示应包含镜像源的简要信息，测速结果属于后续增强。
 - 应高亮显示当前正在使用的镜像源，减少误操作。
 - 切换前提示用户确认，避免手滑操作。
 
@@ -270,13 +291,13 @@ var BuiltinSources = []MirrorSource{
 
 ### 3.8 持久化当前项目使用的镜像源
 
-在项目根目录（或 `android/` 目录）下创建一个隐藏文件 `.fgt-config`，记录当前选中的镜像源名称。这样 `mirror current` 可以快速读取，`doctor` 可以对比实际配置文件是否与此记录一致。
+在项目根目录下创建一个隐藏文件 `.fgt-config`，记录当前选中的镜像源名称。这样 `mirror current` 可以快速读取，`doctor` 可以对比实际配置文件是否与此记录一致。
 
 **约束**：
 
 - 该文件应加入 `.gitignore`，避免提交到仓库。
 - 如果文件丢失，`current` 命令应通过分析 `gradle-wrapper.properties` 中的 URL 反向推断使用的镜像源（通过字符串匹配内置源列表）。
-- 文件格式使用 JSON 或 Key=Value 的简单格式，方便用户手动查看和编辑。
+- 文件格式统一使用 JSON，示例为 `{"source":"aliyun"}`，便于后续扩展字段。
 
 ### 3.9 Windows 兼容性
 
@@ -333,8 +354,8 @@ var BuiltinSources = []MirrorSource{
 | 切换源后 `gradle-wrapper.properties` 未更新 | 项目路径不正确或文件权限问题      | 运行 `fgt doctor` 检查；确保在 Flutter 项目根目录执行            |
 | 切换 Maven 镜像后构建仍访问国外仓库         | `build.gradle` 中镜像未排在最前面 | 工具应确保插入的镜像仓库在 `repositories` 列表顶部；手动检查顺序 |
 | 交互式选择时出现乱码                        | 终端编码问题                      | 使用 UTF-8 终端；或通过 `--source` 参数直接指定                  |
-| `fgt exec` 报"找不到文件"                   | Windows 上未检测到 `gradlew.bat`  | 确保项目已执行 `flutter pub get` 生成 wrapper 脚本               |
-| 测速全部超时/失败                           | 网络环境受限（如企业代理）        | 使用 `--skip-test` 跳过测速，直接指定镜像源                      |
+| `fgt exec` 报"找不到文件"                   | Windows 上未检测到 `gradlew.bat`  | 确保 Flutter 项目的 `android/` 目录中已存在 `gradlew.bat`       |
+| 测速全部超时/失败                           | 网络环境受限（如企业代理）        | 直接跳过测速，手动指定镜像源                                    |
 
 ---
 

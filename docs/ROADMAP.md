@@ -1,4 +1,23 @@
+---
+title: flutter-gradle-tool 路线图
+doc_type: roadmap
+version: 0.2.0
+status: draft
+updated: 2026-06-10
+related_docs:
+  - report.md
+  - TODO.md
+  - tech-decision.md
+---
+
 # 路线图：flutter-gradle-tool
+
+## 文档关系
+
+- [report.md](report.md)：产品方案、范围和实现约束。
+- [TODO.md](TODO.md)：当前阶段的执行清单。
+- [tech-decision.md](tech-decision.md)：库选型与自研边界。
+- 本文档：阶段目标、里程碑、风险与评审节奏。
 
 > 基于 Go 的 Flutter Gradle 加速 CLI 工具
 
@@ -93,14 +112,14 @@
 | 关键结果 | 衡量标准 |
 |----------|----------|
 | KR1: 镜像测速 | `mirror test` 并发测速，超时 5s，排序输出 |
-| KR2: 交互式选择 | promptui 菜单展示带测速结果的镜像列表 |
+| KR2: 交互式选择 | 简单菜单展示镜像列表，后续可升级为 promptui |
 | KR3: CI 集成文档 | 提供 GitHub Actions、Jenkins 示例 |
 | KR4: 二进制发布 | GitHub Releases 发布 Windows/macOS/Linux × amd64/arm64 |
 
 **交付物**：
 - [ ] `mirror test` 子命令
-- [ ] 交互式选择 UI 优化
-- [ ] GitHb Actions CI/CD 配置
+- [ ] 交互式选择 UI 优化（可选引入 promptui）
+- [ ] GitHub Actions CI/CD 配置
 - [ ] GitHub Releases 发布脚本
 - [ ] 用户文档（README、使用示例）
 

@@ -1,4 +1,23 @@
+---
+title: flutter-gradle-tool P1 TODO
+doc_type: todo
+version: 0.2.0
+status: in_progress
+updated: 2026-06-10
+related_docs:
+  - report.md
+  - ROADMAP.md
+  - tech-decision.md
+---
+
 # TODO：P1 项目骨架与镜像管理核心
+
+## 文档关系
+
+- [report.md](report.md)：定义产品方案和实现约束。
+- [ROADMAP.md](ROADMAP.md)：定义阶段目标和里程碑。
+- [tech-decision.md](tech-decision.md)：定义库选型与自研边界。
+- 本文档：定义 P1 的可执行任务和依赖。
 
 > 时间跨度：第 1-3 周 | 状态：进行中
 
@@ -85,7 +104,7 @@
   - 负责人：@dev
   - 预估：1.5h
 - [ ] **4.2 标记当前选中源** — 从持久化配置读取当前源，在列表中用 `*` 标记
-  - 依赖：6.1
+  - 依赖：6.2
   - 负责人：@dev
   - 预估：1h
 - [ ] **4.3 注册到 mirror 子命令组** — `fgt mirror list` 绑定
@@ -113,7 +132,7 @@
   - 依赖：5.4
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **5.6 基本交互式模式** — 使用 promptui 显示菜单供用户选择（无测速信息，P4 增强）
+- [ ] **5.6 基本交互式模式** — 先使用标准库实现简单菜单供用户选择（无测速信息，P4 再评估是否引入 promptui）
   - 依赖：5.1
   - 负责人：@dev
   - 预估：1.5h
