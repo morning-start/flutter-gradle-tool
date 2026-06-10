@@ -43,13 +43,11 @@ func Check(projectDir string) (Report, error) {
 	)
 	if err == nil {
 		report.WrapperPath = wrapperPath
-		version, distType, parseErr := gradle.ParseWrapperDistributionURL(wrapperContent)
+		_, _, parseErr := gradle.ParseWrapperDistributionURL(wrapperContent)
 		if parseErr != nil {
 			report.Issues = append(report.Issues, "wrapper distributionUrl is invalid")
-		} else if source := mirror.SourceFromDistributionURL(extractURL(wrapperContent)); source != nil {
+		} else if source := mirror.SourceFromDistributionURL(mirror.ExtractDistributionURL(wrapperContent)); source != nil {
 			report.WrapperSource = source.Name
-			_ = version
-			_ = distType
 		} else {
 			report.Issues = append(report.Issues, "wrapper mirror source is unknown")
 		}
@@ -122,15 +120,4 @@ func loadFirstExisting(paths ...string) (string, string, error) {
 		}
 	}
 	return "", "", apperrors.New(apperrors.ExitProjectNotFound, "file not found")
-}
-
-func extractURL(content string) string {
-	content = strings.ReplaceAll(content, "\r\n", "\n")
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "distributionUrl=") {
-			return strings.TrimSpace(strings.TrimPrefix(line, "distributionUrl="))
-		}
-	}
-	return ""
 }
