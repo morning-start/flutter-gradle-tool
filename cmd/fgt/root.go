@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -310,17 +314,9 @@ func newMirrorSetCommand() *cobra.Command {
 				return fmt.Errorf("--ci requires --source")
 			}
 
-			if interactive && sourceName == "" {
-				sourceName = "aliyun"
-			}
-
-			if sourceName == "" {
-				return fmt.Errorf("--source is required")
-			}
-
-			source := mirror.FindByName(sourceName)
-			if source == nil {
-				return fmt.Errorf("unknown mirror source: %s", sourceName)
+			source, err := resolveMirrorSetSource(cmd, sourceName, interactive)
+			if err != nil {
+				return err
 			}
 
 			if wrapperOnly || mavenOnly {
@@ -338,6 +334,65 @@ func newMirrorSetCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&interactive, "interactive", false, "Interactive selection")
 
 	return cmd
+}
+
+func resolveMirrorSetSource(cmd *cobra.Command, sourceName string, interactive bool) (*mirror.Source, error) {
+	if sourceName != "" {
+		source := mirror.FindByName(sourceName)
+		if source == nil {
+			return nil, fmt.Errorf("unknown mirror source: %s", sourceName)
+		}
+		return source, nil
+	}
+
+	if !interactive {
+		return nil, fmt.Errorf("--source is required")
+	}
+
+	return chooseMirrorSourceInteractively(cmd)
+}
+
+func chooseMirrorSourceInteractively(cmd *cobra.Command) (*mirror.Source, error) {
+	current, _ := mirror.CurrentSource(projectDir)
+	out := cmd.OutOrStdout()
+	in := bufio.NewReader(cmd.InOrStdin())
+
+	fmt.Fprintln(out, "Available mirror sources:")
+	for i, source := range mirror.BuiltinSources {
+		marker := " "
+		if source.Name == current {
+			marker = "*"
+		}
+		fmt.Fprintf(out, "%s %d) %s - %s\n", marker, i+1, source.Name, source.DisplayName)
+	}
+	fmt.Fprint(out, "Select mirror source by number: ")
+
+	choiceLine, err := in.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+	choiceLine = strings.TrimSpace(choiceLine)
+	if choiceLine == "" {
+		return nil, fmt.Errorf("selection is required")
+	}
+
+	index, err := strconv.Atoi(choiceLine)
+	if err != nil || index < 1 || index > len(mirror.BuiltinSources) {
+		return nil, fmt.Errorf("invalid selection: %s", choiceLine)
+	}
+
+	selected := mirror.BuiltinSources[index-1]
+	fmt.Fprintf(out, "Apply %s? [y/N]: ", selected.Name)
+	confirmLine, err := in.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+	confirmLine = strings.TrimSpace(strings.ToLower(confirmLine))
+	if confirmLine != "y" && confirmLine != "yes" {
+		return nil, fmt.Errorf("selection cancelled")
+	}
+
+	return &selected, nil
 }
 
 func newMirrorCurrentCommand() *cobra.Command {
@@ -365,7 +420,12 @@ func newMirrorTestCommand() *cobra.Command {
 		Use:   "test",
 		Short: "Test mirror availability",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "mirror test is not implemented yet")
+			results := mirror.TestSources(cmd.Context(), mirror.BuiltinSources, 5*time.Second, 4)
+			out := cmd.OutOrStdout()
+			fmt.Fprintln(out, "NAME\tSTATUS\tDURATION\tURL")
+			for _, result := range results {
+				fmt.Fprintf(out, "%s\t%s\t%s\t%s\n", result.Source.Name, result.Status, result.Duration, result.TestedURL)
+			}
 			return nil
 		},
 	}

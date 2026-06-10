@@ -36,7 +36,7 @@ related_docs:
 | P1 | 项目骨架与镜像管理核心 | 第 1-3 周 | CLI 框架 + 镜像源 CRUD | **进行中** |
 | P2 | Gradle 配置操作 | 第 4-6 周 | init 命令 + wrapper/Maven 修改 | 进行中 |
 | P3 | 辅助命令与平台适配 | 第 7-8 周 | doctor + cache + exec + Windows 兼容 | 进行中 |
-| P4 | 高级功能与发布 | 第 9-11 周 | 测速 + 文档 + 二进制发布 | 待开始 |
+| P4 | 高级功能与发布 | 第 9-11 周 | 测速 + 文档 + 二进制发布 | 进行中 |
 
 ---
 
@@ -117,8 +117,8 @@ related_docs:
 | KR4: 二进制发布 | GitHub Releases 发布 Windows/macOS/Linux × amd64/arm64 |
 
 **交付物**：
-- [ ] `mirror test` 子命令
-- [ ] 交互式选择 UI 优化（可选引入 promptui）
+- [x] `mirror test` 子命令
+- [x] 交互式选择 UI 优化（可选引入 promptui）
 - [ ] GitHub Actions CI/CD 配置
 - [ ] GitHub Releases 发布脚本
 - [ ] 用户文档（README、使用示例）

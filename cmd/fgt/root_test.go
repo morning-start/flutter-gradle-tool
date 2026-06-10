@@ -61,6 +61,30 @@ func TestMirrorListMarksCurrent(t *testing.T) {
 	}
 }
 
+func TestMirrorSetInteractive(t *testing.T) {
+	projectDir := t.TempDir()
+
+	in := strings.NewReader("3\ny\n")
+	out := &bytes.Buffer{}
+	cmd := newRootCommand()
+	cmd.SetIn(in)
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", projectDir, "mirror", "set", "--interactive"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("interactive mirror set returned error: %v\noutput:\n%s", err, out.String())
+	}
+
+	configPath := filepath.Join(projectDir, ".fgt-config")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s) error = %v", configPath, err)
+	}
+	if !strings.Contains(string(data), `"source":"aliyun"`) {
+		t.Fatalf("interactive mirror set saved wrong config:\n%s", string(data))
+	}
+}
+
 func TestDoctorReportsOk(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFlutterProjectFiles(t, projectDir)
