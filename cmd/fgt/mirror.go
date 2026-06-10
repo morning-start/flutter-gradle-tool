@@ -66,7 +66,7 @@ func newMirrorSetCommand() *cobra.Command {
 		Short: "Set the active mirror source",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ciMode && sourceName == "" {
-				return fmt.Errorf("--ci requires --source")
+				return errors.New(errors.ExitCIRequiresSource, "--ci requires --source")
 			}
 
 			source, err := resolveSource(cmd, sourceName, interactive, false)
