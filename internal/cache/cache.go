@@ -8,12 +8,19 @@ import (
 	apperrors "flutter-gradle-tool/internal/errors"
 )
 
+type VersionInfo struct {
+	Name string
+	Size int64
+}
+
 type Info struct {
-	Root       string
-	CachesDir  string
-	WrapperDir string
-	TotalSize  int64
-	Exists     bool
+	Root              string
+	CachesDir         string
+	WrapperDir        string
+	TotalSize         int64
+	Exists            bool
+	CachesBreakdown   []VersionInfo
+	WrapperBreakdown  []VersionInfo
 }
 
 func GradleUserHome() string {
@@ -45,7 +52,34 @@ func Inspect() (Info, error) {
 		return Info{}, err
 	}
 	info.TotalSize = total
+
+	info.CachesBreakdown, _ = subDirSizes(filepath.Join(root, "caches"))
+	info.WrapperBreakdown, _ = subDirSizes(filepath.Join(root, "wrapper", "dists"))
+
 	return info, nil
+}
+
+func subDirSizes(dir string) ([]VersionInfo, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var breakdown []VersionInfo
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		size, err := dirSize(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		breakdown = append(breakdown, VersionInfo{Name: entry.Name(), Size: size})
+	}
+	return breakdown, nil
 }
 
 func CleanAll() ([]string, error) {

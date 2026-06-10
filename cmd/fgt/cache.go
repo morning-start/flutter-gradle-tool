@@ -9,6 +9,17 @@ import (
 	"flutter-gradle-tool/internal/errors"
 )
 
+func formatSize(size int64) string {
+	switch {
+	case size >= 1<<30:
+		return fmt.Sprintf("%.1f GiB", float64(size)/(1<<30))
+	case size >= 1<<20:
+		return fmt.Sprintf("%.1f MiB", float64(size)/(1<<20))
+	default:
+		return fmt.Sprintf("%.1f KiB", float64(size)/(1<<10))
+	}
+}
+
 func newCacheCommand() *cobra.Command {
 	var cleanAll bool
 
@@ -21,7 +32,15 @@ func newCacheCommand() *cobra.Command {
 				return errors.Wrap(errors.ExitProjectNotFound, "cache inspection failed", err)
 			}
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "root: %s\n", info.Root)
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "size: %d\n", info.TotalSize)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "size: %s\n", formatSize(info.TotalSize))
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "caches:")
+			for _, v := range info.CachesBreakdown {
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  %-30s %s\n", v.Name, formatSize(v.Size))
+			}
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "wrapper dists:")
+			for _, v := range info.WrapperBreakdown {
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  %-30s %s\n", v.Name, formatSize(v.Size))
+			}
 			return nil
 		},
 	}
