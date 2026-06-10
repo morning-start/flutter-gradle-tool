@@ -34,7 +34,7 @@ related_docs:
 | 阶段 | 名称 | 时间 | 交付物 | 状态 |
 |------|------|------|--------|------|
 | P1 | 项目骨架与镜像管理核心 | 第 1-3 周 | CLI 框架 + 镜像源 CRUD | **进行中** |
-| P2 | Gradle 配置操作 | 第 4-6 周 | init 命令 + wrapper/Maven 修改 | 待开始 |
+| P2 | Gradle 配置操作 | 第 4-6 周 | init 命令 + wrapper/Maven 修改 | 进行中 |
 | P3 | 辅助命令与平台适配 | 第 7-8 周 | doctor + cache + exec + Windows 兼容 | 待开始 |
 | P4 | 高级功能与发布 | 第 9-11 周 | 测速 + 文档 + 二进制发布 | 待开始 |
 
@@ -77,9 +77,9 @@ related_docs:
 | KR5: Groovy DSL 支持 | 标准 Flutter 项目的 `build.gradle` 正确修改 |
 
 **交付物**：
-- [ ] `internal/gradle/wrapper.go` — URL 解析与重构
-- [ ] `internal/gradle/maven.go` — Maven 镜像注入
-- [ ] `init` 子命令完整实现
+- [x] `internal/gradle/wrapper.go` — URL 解析与重构
+- [x] `internal/gradle/maven.go` — Maven 镜像注入
+- [x] `init` 子命令完整实现
 - [ ] `build.gradle.kts` 支持规划（延后到 P4）
 
 ---
