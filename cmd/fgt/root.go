@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"flutter-gradle-tool/internal/cache"
+	"flutter-gradle-tool/internal/doctor"
 	"flutter-gradle-tool/internal/gradle"
 	"flutter-gradle-tool/internal/mirror"
 )
@@ -33,9 +35,9 @@ func newRootCommand() *cobra.Command {
 
 	cmd.AddCommand(newMirrorCommand())
 	cmd.AddCommand(newInitCommand())
-	cmd.AddCommand(newPlaceholderCommand("cache"))
-	cmd.AddCommand(newPlaceholderCommand("doctor"))
-	cmd.AddCommand(newPlaceholderCommand("exec"))
+	cmd.AddCommand(newCacheCommand())
+	cmd.AddCommand(newDoctorCommand())
+	cmd.AddCommand(newExecCommand())
 
 	return cmd
 }
@@ -46,6 +48,76 @@ func newPlaceholderCommand(name string) *cobra.Command {
 		Short: fmt.Sprintf("%s command placeholder", name),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("%s command is not implemented yet", name)
+		},
+	}
+}
+
+func newDoctorCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "doctor",
+		Short: "Diagnose the current Flutter Gradle setup",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			report, err := doctor.Check(projectDir)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), doctor.Format(report))
+			return nil
+		},
+	}
+}
+
+func newCacheCommand() *cobra.Command {
+	var cleanAll bool
+
+	cmd := &cobra.Command{
+		Use:   "cache",
+		Short: "Inspect or clean Gradle cache",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			info, err := cache.Inspect()
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "root: %s\n", info.Root)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "size: %d\n", info.TotalSize)
+			return nil
+		},
+	}
+
+	cleanCmd := &cobra.Command{
+		Use:   "clean",
+		Short: "Clean Gradle cache directories",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !cleanAll {
+				return fmt.Errorf("use --all to remove cache directories")
+			}
+			removed, err := cache.CleanAll()
+			if err != nil {
+				return err
+			}
+			for _, target := range removed {
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "removed: %s\n", target)
+			}
+			return nil
+		},
+	}
+	cleanCmd.Flags().BoolVar(&cleanAll, "all", false, "Remove all known Gradle cache directories")
+	cmd.AddCommand(cleanCmd)
+
+	return cmd
+}
+
+func newExecCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "exec [gradle task...]",
+		Short: "Run Gradle tasks through the project wrapper",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			output, err := gradle.RunGradle(projectDir, args)
+			if output != "" {
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), output)
+			}
+			return err
 		},
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -58,4 +59,79 @@ func TestMirrorListMarksCurrent(t *testing.T) {
 	if !strings.Contains(output, "*\ttencent") && !strings.Contains(output, "* tencent") {
 		t.Fatalf("mirror list output missing current marker for tencent:\n%s", output)
 	}
+}
+
+func TestDoctorReportsOk(t *testing.T) {
+	projectDir := t.TempDir()
+	writeFlutterProjectFiles(t, projectDir)
+	if err := os.WriteFile(filepath.Join(projectDir, ".fgt-config"), []byte(`{"source":"official"}`), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	out := &bytes.Buffer{}
+	cmd := newRootCommand()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", projectDir, "doctor"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("doctor returned error: %v", err)
+	}
+
+	if !strings.Contains(out.String(), "status: ok") {
+		t.Fatalf("doctor output missing ok status:\n%s", out.String())
+	}
+}
+
+func TestCacheCleanAndExec(t *testing.T) {
+	projectDir := t.TempDir()
+	writeFlutterProjectFiles(t, projectDir)
+	if err := writeWrapperScript(projectDir); err != nil {
+		t.Fatalf("writeWrapperScript() error = %v", err)
+	}
+
+	gradleHome := t.TempDir()
+	t.Setenv("GRADLE_USER_HOME", gradleHome)
+	if err := os.MkdirAll(filepath.Join(gradleHome, "caches"), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(gradleHome, "wrapper", "dists"), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	out := &bytes.Buffer{}
+	cmd := newRootCommand()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", projectDir, "cache", "clean", "--all"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cache clean returned error: %v\noutput:\n%s", err, out.String())
+	}
+	if _, err := os.Stat(filepath.Join(gradleHome, "caches")); !os.IsNotExist(err) {
+		t.Fatalf("caches directory still exists: %v", err)
+	}
+
+	out.Reset()
+	cmd = newRootCommand()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", projectDir, "exec", "build"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("exec returned error: %v\noutput:\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "wrapper:build") {
+		t.Fatalf("exec output missing wrapper marker:\n%s", out.String())
+	}
+}
+
+func writeWrapperScript(projectDir string) error {
+	androidDir := filepath.Join(projectDir, "android")
+	if err := os.MkdirAll(androidDir, 0o755); err != nil {
+		return err
+	}
+
+	if runtime.GOOS == "windows" {
+		return os.WriteFile(filepath.Join(androidDir, "gradlew.bat"), []byte("@echo off\r\necho wrapper:%*\r\n"), 0o755)
+	}
+
+	return os.WriteFile(filepath.Join(androidDir, "gradlew"), []byte("#!/bin/sh\necho wrapper:$*\n"), 0o755)
 }

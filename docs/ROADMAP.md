@@ -35,7 +35,7 @@ related_docs:
 |------|------|------|--------|------|
 | P1 | 项目骨架与镜像管理核心 | 第 1-3 周 | CLI 框架 + 镜像源 CRUD | **进行中** |
 | P2 | Gradle 配置操作 | 第 4-6 周 | init 命令 + wrapper/Maven 修改 | 进行中 |
-| P3 | 辅助命令与平台适配 | 第 7-8 周 | doctor + cache + exec + Windows 兼容 | 待开始 |
+| P3 | 辅助命令与平台适配 | 第 7-8 周 | doctor + cache + exec + Windows 兼容 | 进行中 |
 | P4 | 高级功能与发布 | 第 9-11 周 | 测速 + 文档 + 二进制发布 | 待开始 |
 
 ---
@@ -97,9 +97,9 @@ related_docs:
 | KR5: 跨平台测试 | Windows + macOS + Linux 三平台通过测试 |
 
 **交付物**：
-- [ ] `internal/cache/cache.go`
-- [ ] `internal/doctor/doctor.go`
-- [ ] `internal/gradle/build.go`（exec 逻辑）
+- [x] `internal/cache/cache.go`
+- [x] `internal/doctor/doctor.go`
+- [x] `internal/gradle/build.go`（exec 逻辑）
 - [ ] Windows 兼容性适配
 - [ ] 跨平台 CI 测试
 
