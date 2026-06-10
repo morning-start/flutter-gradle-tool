@@ -51,11 +51,11 @@ func newInitCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&sourceName, "source", "", "Mirror source name")
-	cmd.Flags().BoolVar(&wrapperOnly, "wrapper-only", false, "Only change wrapper mirror")
-	cmd.Flags().BoolVar(&mavenOnly, "maven-only", false, "Only change Maven mirror")
+	cmd.Flags().StringVarP(&sourceName, "source", "s", "", "Mirror source name")
+	cmd.Flags().BoolVarP(&wrapperOnly, "wrapper-only", "w", false, "Only change wrapper mirror")
+	cmd.Flags().BoolVarP(&mavenOnly, "maven-only", "m", false, "Only change Maven mirror")
 	cmd.Flags().BoolVar(&ciMode, "ci", false, "Non-interactive mode")
-	cmd.Flags().BoolVar(&interactive, "interactive", false, "Interactive selection")
+	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive selection")
 
 	return cmd
 }
@@ -81,7 +81,7 @@ func rewriteWrapperFile(projectDir string, source mirror.Source) error {
 	}
 	if changed {
 		if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
-			return fmt.Errorf("write wrapper file: %w", err)
+			return errors.Wrap(errors.ExitPermission, "write wrapper file", err)
 		}
 	}
 	return nil
@@ -117,7 +117,7 @@ func rewriteBuildGradleFile(projectDir string, source mirror.Source) error {
 	}
 	if changed {
 		if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
-			return fmt.Errorf("write build.gradle: %w", err)
+			return errors.Wrap(errors.ExitPermission, "write build.gradle", err)
 		}
 	}
 	return nil

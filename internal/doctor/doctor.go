@@ -15,8 +15,8 @@ type Report struct {
 	ProjectDir         string
 	WrapperPath        string
 	WrapperSource      string
-	BuildGradlePath    string
-	BuildGradleMirrors bool
+	BuildScriptPath    string
+	BuildScriptMirrors bool
 	ConfigPath         string
 	ConfigSource       string
 	Issues             []string
@@ -56,25 +56,27 @@ func Check(projectDir string) (Report, error) {
 	}
 
 	buildGradlePath, buildGradleContent, err := loadFirstExisting(
+		filepath.Join(projectDir, "android", "build.gradle.kts"),
+		filepath.Join(projectDir, "build.gradle.kts"),
 		filepath.Join(projectDir, "android", "build.gradle"),
 		filepath.Join(projectDir, "build.gradle"),
 	)
 	if err == nil {
-		report.BuildGradlePath = buildGradlePath
-		report.BuildGradleMirrors = gradle.BuildGradleHasMirror(buildGradleContent)
+		report.BuildScriptPath = buildGradlePath
+		report.BuildScriptMirrors = gradle.BuildGradleHasMirror(buildGradleContent)
 	} else {
-		report.Issues = append(report.Issues, "build.gradle file is missing")
+		report.Issues = append(report.Issues, "build script file is missing")
 	}
 
 	if report.ConfigSource != "" && report.WrapperSource != "" && report.ConfigSource != report.WrapperSource {
 		report.Issues = append(report.Issues, fmt.Sprintf("config source %s does not match wrapper source %s", report.ConfigSource, report.WrapperSource))
 	}
 
-	if report.ConfigSource == "official" && report.BuildGradleMirrors {
+	if report.ConfigSource == "official" && report.BuildScriptMirrors {
 		report.Issues = append(report.Issues, "official source should not keep Maven mirror blocks")
 	}
 
-	if report.ConfigSource != "" && report.ConfigSource != "official" && !report.BuildGradleMirrors {
+	if report.ConfigSource != "" && report.ConfigSource != "official" && !report.BuildScriptMirrors {
 		report.Issues = append(report.Issues, "Maven mirror blocks are missing")
 	}
 
@@ -94,12 +96,12 @@ func Format(report Report) string {
 	} else {
 		fmt.Fprintf(&b, "wrapper: %s\n", report.WrapperSource)
 	}
-	if report.BuildGradlePath == "" {
-		b.WriteString("build.gradle: missing\n")
-	} else if report.BuildGradleMirrors {
-		b.WriteString("build.gradle: mirrors present\n")
+	if report.BuildScriptPath == "" {
+		b.WriteString("build script: missing\n")
+	} else if report.BuildScriptMirrors {
+		fmt.Fprintf(&b, "%s: mirrors present\n", filepath.Base(report.BuildScriptPath))
 	} else {
-		b.WriteString("build.gradle: mirrors absent\n")
+		fmt.Fprintf(&b, "%s: mirrors absent\n", filepath.Base(report.BuildScriptPath))
 	}
 	if len(report.Issues) == 0 {
 		b.WriteString("status: ok\n")

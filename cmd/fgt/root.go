@@ -32,7 +32,7 @@ func newRootCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&projectDir, "project-dir", ".", "Path to Flutter project root")
+	cmd.PersistentFlags().StringVar(&projectDir, "project-dir", "./android", "Path to Flutter project android directory")
 
 	cmd.AddCommand(newMirrorCommand())
 	cmd.AddCommand(newInitCommand())

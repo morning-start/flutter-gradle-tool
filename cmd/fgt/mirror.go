@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -33,16 +36,17 @@ func newMirrorListCommand() *cobra.Command {
 				return err
 			}
 
-			out := cmd.OutOrStdout()
-			fmt.Fprintln(out, "CURRENT\tNAME\tDISPLAY\tGRADLE_URL\tMAVEN_URL")
+			tw := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 3, ' ', 0)
+			fmt.Fprintln(tw, "\tNAME\tGRADLE URL")
+			fmt.Fprintln(tw, "\t----\t----------")
 			for _, source := range mirror.BuiltinSources {
 				marker := " "
 				if source.Name == current {
 					marker = "*"
 				}
-				fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\n", marker, source.Name, source.DisplayName, source.GradleURL, source.MavenURL)
+				fmt.Fprintf(tw, "%s\t%s\t%s\n", marker, source.Name, source.GradleURL)
 			}
-			return nil
+			return tw.Flush()
 		},
 	}
 }
@@ -52,6 +56,8 @@ func newMirrorSetCommand() *cobra.Command {
 		sourceName  string
 		ciMode      bool
 		interactive bool
+		wrapperOnly bool
+		mavenOnly   bool
 	)
 
 	cmd := &cobra.Command{
@@ -67,13 +73,27 @@ func newMirrorSetCommand() *cobra.Command {
 				return err
 			}
 
+			if !wrapperOnly {
+				if err := rewriteWrapperFile(projectDir, *source); err != nil {
+					return err
+				}
+			}
+
+			if !mavenOnly {
+				if err := rewriteBuildGradleFile(projectDir, *source); err != nil {
+					return err
+				}
+			}
+
 			return mirror.SaveConfig(projectDir, source.Name)
 		},
 	}
 
-	cmd.Flags().StringVar(&sourceName, "source", "", "Mirror source name")
+	cmd.Flags().StringVarP(&sourceName, "source", "s", "", "Mirror source name")
 	cmd.Flags().BoolVar(&ciMode, "ci", false, "Non-interactive mode")
-	cmd.Flags().BoolVar(&interactive, "interactive", false, "Interactive selection")
+	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive selection")
+	cmd.Flags().BoolVarP(&wrapperOnly, "wrapper-only", "w", false, "Only change wrapper mirror")
+	cmd.Flags().BoolVarP(&mavenOnly, "maven-only", "m", false, "Only change Maven mirror")
 
 	return cmd
 }
@@ -103,13 +123,20 @@ func newMirrorTestCommand() *cobra.Command {
 		Use:   "test",
 		Short: "Test mirror availability",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			results := mirror.TestSources(cmd.Context(), mirror.BuiltinSources, 5*time.Second, 4)
-			out := cmd.OutOrStdout()
-			fmt.Fprintln(out, "NAME\tSTATUS\tDURATION\tURL")
-			for _, result := range results {
-				fmt.Fprintf(out, "%s\t%s\t%s\t%s\n", result.Source.Name, result.Status, result.Duration, result.TestedURL)
+			concurrency := 4
+			if env := os.Getenv("FGT_TEST_CONCURRENCY"); env != "" {
+				if v, err := strconv.Atoi(env); err == nil && v > 0 {
+					concurrency = v
+				}
 			}
-			return nil
+			results := mirror.TestSources(cmd.Context(), mirror.BuiltinSources, 5*time.Second, concurrency)
+			tw := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 3, ' ', 0)
+			fmt.Fprintln(tw, "NAME\tSTATUS\tDURATION\tURL")
+			fmt.Fprintln(tw, "----\t------\t--------\t---")
+			for _, result := range results {
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", result.Source.Name, result.Status, result.Duration, result.TestedURL)
+			}
+			return tw.Flush()
 		},
 	}
 }

@@ -26,7 +26,42 @@ func SaveConfig(projectDir, source string) error {
 	if err := os.WriteFile(ConfigPath(projectDir), data, 0o644); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
-	return nil
+
+	return ensureGitIgnore(projectDir)
+}
+
+func ensureGitIgnore(projectDir string) error {
+	gitignorePath := filepath.Join(projectDir, ".gitignore")
+	entry := ".fgt-config"
+
+	data, err := os.ReadFile(gitignorePath)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("read .gitignore: %w", err)
+		}
+		return os.WriteFile(gitignorePath, []byte(entry+"\n"), 0o644)
+	}
+
+	content := string(data)
+	for _, line := range strings.Split(content, "\n") {
+		if strings.TrimSpace(line) == entry {
+			return nil
+		}
+	}
+
+	f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("append .gitignore: %w", err)
+	}
+	defer f.Close()
+
+	if !strings.HasSuffix(content, "\n") {
+		if _, err := f.WriteString("\n"); err != nil {
+			return fmt.Errorf("write .gitignore: %w", err)
+		}
+	}
+	_, err = f.WriteString(entry + "\n")
+	return err
 }
 
 func LoadConfig(projectDir string) (string, error) {

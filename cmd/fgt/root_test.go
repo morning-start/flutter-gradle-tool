@@ -13,6 +13,7 @@ import (
 
 func TestMirrorSetAndCurrent(t *testing.T) {
 	projectDir := t.TempDir()
+	writeFlutterProjectFiles(t, projectDir)
 
 	out := &bytes.Buffer{}
 	cmd := newRootCommand()
@@ -58,13 +59,19 @@ func TestMirrorListMarksCurrent(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "*\ttencent") && !strings.Contains(output, "* tencent") {
-		t.Fatalf("mirror list output missing current marker for tencent:\n%s", output)
+	if !strings.Contains(output, "tencent") {
+		t.Fatalf("mirror list output missing tencent:\n%s", output)
+	}
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, "tencent") && !strings.HasPrefix(strings.TrimSpace(line), "*") {
+			t.Fatalf("mirror list output missing current marker before tencent:\n%s", output)
+		}
 	}
 }
 
 func TestMirrorSetInteractive(t *testing.T) {
 	projectDir := t.TempDir()
+	writeFlutterProjectFiles(t, projectDir)
 
 	in := strings.NewReader("3\ny\n")
 	out := &bytes.Buffer{}
