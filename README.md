@@ -37,7 +37,7 @@ fgt exec build
 
 ## Status
 
-This repository is documentation-first right now. The implementation plan lives in:
+Implementation has started. The current plan and status live in:
 
 - [docs/report.md](docs/report.md)
 - [docs/ROADMAP.md](docs/ROADMAP.md)

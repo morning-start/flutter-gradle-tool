@@ -37,98 +37,98 @@ related_docs:
 ### 1. 项目骨架搭建（P0 · 1-2 天）
 
 - [x] **1.1 初始化 Go 模块** — `go.mod` 已存在，确认 module path 为 `flutter-gradle-tool`
-- [ ] **1.2 创建目录结构** — 按报告建立 `cmd/fgt/`、`internal/mirror/`、`internal/gradle/`、`internal/doctor/`、`internal/cache/`
+- [x] **1.2 创建目录结构** — 按报告建立 `cmd/fgt/`、`internal/mirror/`、`internal/gradle/`、`internal/doctor/`、`internal/cache/`
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **1.3 安装 CLI 框架依赖** — `go get github.com/spf13/cobra`
+- [x] **1.3 安装 CLI 框架依赖** — `go get github.com/spf13/cobra`
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **1.4 创建主入口文件** — `cmd/fgt/main.go`，初始化 cobra root command
+- [x] **1.4 创建主入口文件** — `cmd/fgt/main.go`，初始化 cobra root command
   - 依赖：1.2、1.3
   - 负责人：@dev
   - 预估：1h
-- [ ] **1.5 验证项目可编译** — `go build ./cmd/fgt/...` 通过
+- [x] **1.5 验证项目可编译** — `go build ./cmd/fgt/...` 通过
   - 依赖：1.4
   - 负责人：@dev
   - 预估：0.5h
 
 ### 2. CLI 框架集成（P0 · 1-2 天）
 
-- [ ] **2.1 根命令配置** — 支持 `--version` 和 `--help`，输出工具名称和简介
+- [x] **2.1 根命令配置** — 支持 `--version` 和 `--help`，输出工具名称和简介
   - 依赖：1.4
   - 负责人：@dev
   - 预估：1h
-- [ ] **2.2 `mirror` 子命令组** — 注册 `mirror` 作为子命令组，`fgt mirror --help` 显示子命令列表
+- [x] **2.2 `mirror` 子命令组** — 注册 `mirror` 作为子命令组，`fgt mirror --help` 显示子命令列表
   - 依赖：2.1
   - 负责人：@dev
   - 预估：1h
-- [ ] **2.3 占位子命令** — 为 `init`/`cache`/`doctor`/`exec` 注册空占位，输出"功能开发中"提示
+- [x] **2.3 占位子命令** — 为 `init`/`cache`/`doctor`/`exec` 注册空占位，输出"功能开发中"提示
   - 依赖：2.1
   - 负责人：@dev
   - 预估：1h
-- [ ] **2.4 `version` 子命令** — 输出当前版本号（从编译时注入或硬编码）
+- [x] **2.4 `version` 子命令** — 输出当前版本号（从编译时注入或硬编码）
   - 依赖：2.1
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **2.5 全局标志支持** — `--project-dir` 全局标志，默认当前目录
+- [x] **2.5 全局标志支持** — `--project-dir` 全局标志，默认当前目录
   - 依赖：2.1
   - 负责人：@dev
   - 预估：0.5h
 
 ### 3. 镜像源数据结构（P0 · 1 天）
 
-- [ ] **3.1 定义 MirrorSource 结构体** — `internal/mirror/source.go`，含 Name/DisplayName/GradleURL/MavenURL
+- [x] **3.1 定义 MirrorSource 结构体** — `internal/mirror/source.go`，含 Name/DisplayName/GradleURL/MavenURL
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **3.2 定义 BuiltinSources 内置列表** — 初始化 4 个镜像源（official/tencent/aliyun/huaweicloud）
+- [x] **3.2 定义 BuiltinSources 内置列表** — 初始化 4 个镜像源（official/tencent/aliyun/huaweicloud）
   - 依赖：3.1
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **3.3 实现 FindByName 查找函数** — 大小写不敏感匹配，返回 `*MirrorSource`
+- [x] **3.3 实现 FindByName 查找函数** — 大小写不敏感匹配，返回 `*MirrorSource`
   - 依赖：3.1
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **3.4 实现 GetSourceNames 函数** — 返回所有内置源名称列表
+- [x] **3.4 实现 GetSourceNames 函数** — 返回所有内置源名称列表
   - 依赖：3.1
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **3.5 单元测试 — 数据结构** — 覆盖查找成功/失败/大小写/空字符串
+- [x] **3.5 单元测试 — 数据结构** — 覆盖查找成功/失败/大小写/空字符串
   - 依赖：3.3、3.4
   - 负责人：@dev
   - 预估：1h
 
 ### 4. `mirror list` 子命令（P1 · 1 天）
 
-- [ ] **4.1 实现列表输出** — 格式化表格输出所有镜像源，包含序号、名称、Gradle URL、Maven URL
+- [x] **4.1 实现列表输出** — 格式化表格输出所有镜像源，包含序号、名称、Gradle URL、Maven URL
   - 依赖：3.2
   - 负责人：@dev
   - 预估：1.5h
-- [ ] **4.2 标记当前选中源** — 从持久化配置读取当前源，在列表中用 `*` 标记
+- [x] **4.2 标记当前选中源** — 从持久化配置读取当前源，在列表中用 `*` 标记
   - 依赖：6.2
   - 负责人：@dev
   - 预估：1h
-- [ ] **4.3 注册到 mirror 子命令组** — `fgt mirror list` 绑定
+- [x] **4.3 注册到 mirror 子命令组** — `fgt mirror list` 绑定
   - 依赖：2.2、4.1
   - 负责人：@dev
   - 预估：0.5h
 
 ### 5. `mirror set` 子命令（P1 · 2-3 天）
 
-- [ ] **5.1 定义 set 子命令标志** — `--source`、`--wrapper-only`、`--maven-only`、`--ci`、`--interactive`
+- [x] **5.1 定义 set 子命令标志** — `--source`、`--wrapper-only`、`--maven-only`、`--ci`、`--interactive`
   - 负责人：@dev
   - 预估：1h
-- [ ] **5.2 校验 `--source` 参数** — 检查是否有效镜像源名称，无效时列出可用源并报错（退出码 4）
+- [x] **5.2 校验 `--source` 参数** — 检查是否有效镜像源名称，无效时列出可用源并报错（退出码 4）
   - 依赖：3.3
   - 负责人：@dev
   - 预估：1h
-- [ ] **5.3 校验 `--ci` 模式** — 如果启用 `--ci` 但未提供 `--source`，报错退出（退出码 5）
+- [x] **5.3 校验 `--ci` 模式** — 如果启用 `--ci` 但未提供 `--source`，报错退出（退出码 5）
   - 负责人：@dev
   - 预估：0.5h
-- [ ] **5.4 基本 set 逻辑** — 将选中的源名称写入 `.fgt-config`
+- [x] **5.4 基本 set 逻辑** — 将选中的源名称写入 `.fgt-config`
   - 依赖：6.1、5.2
   - 负责人：@dev
   - 预估：1h
-- [ ] **5.5 `--wrapper-only` / `--maven-only` 分支** — P1 阶段仅写入持久化配置，实际的 URL 替换功能在 P2 实现
+- [x] **5.5 `--wrapper-only` / `--maven-only` 分支** — P1 阶段仅写入持久化配置，实际的 URL 替换功能在 P2 实现
   - 依赖：5.4
   - 负责人：@dev
   - 预估：0.5h
@@ -136,35 +136,35 @@ related_docs:
   - 依赖：5.1
   - 负责人：@dev
   - 预估：1.5h
-- [ ] **5.7 注册到 mirror 子命令组** — `fgt mirror set` 绑定
+- [x] **5.7 注册到 mirror 子命令组** — `fgt mirror set` 绑定
   - 依赖：2.2、5.4
   - 负责人：@dev
   - 预估：0.5h
 
 ### 6. 持久化机制（P1 · 1-2 天）
 
-- [ ] **6.1 实现 SaveConfig 函数** — 将当前镜像源名称写入项目根目录 `.fgt-config`（JSON 格式：`{"source":"aliyun"}`）
+- [x] **6.1 实现 SaveConfig 函数** — 将当前镜像源名称写入项目根目录 `.fgt-config`（JSON 格式：`{"source":"aliyun"}`）
   - 负责人：@dev
   - 预估：1h
-- [ ] **6.2 实现 LoadConfig 函数** — 读取 `.fgt-config`，返回当前源名称；文件不存在返回空字符串
+- [x] **6.2 实现 LoadConfig 函数** — 读取 `.fgt-config`，返回当前源名称；文件不存在返回空字符串
   - 负责人：@dev
   - 预估：1h
-- [ ] **6.3 实现 ReverseInferSource 函数** — 读取 `gradle-wrapper.properties` 中 distributionUrl，通过字符串匹配内置源列表反向推断当前源
+- [x] **6.3 实现 ReverseInferSource 函数** — 读取 `gradle-wrapper.properties` 中 distributionUrl，通过字符串匹配内置源列表反向推断当前源
   - 依赖：3.2
   - 负责人：@dev
   - 预估：2h
-- [ ] **6.4 单元测试 — 持久化** — 覆盖保存/读取/文件不存在/反向推断/URL 匹配
+- [x] **6.4 单元测试 — 持久化** — 覆盖保存/读取/文件不存在/反向推断/URL 匹配
   - 依赖：6.1、6.2、6.3
   - 负责人：@dev
   - 预估：1.5h
 
 ### 7. `mirror current` 子命令（P1 · 0.5 天）
 
-- [ ] **7.1 实现 current 命令** — 优先读取 `.fgt-config`，若不存在则反向推断，若均无法确定则提示"未配置"
+- [x] **7.1 实现 current 命令** — 优先读取 `.fgt-config`，若不存在则反向推断，若均无法确定则提示"未配置"
   - 依赖：6.2、6.3
   - 负责人：@dev
   - 预估：1h
-- [ ] **7.2 注册到 mirror 子命令组** — `fgt mirror current` 绑定
+- [x] **7.2 注册到 mirror 子命令组** — `fgt mirror current` 绑定
   - 依赖：2.2、7.1
   - 负责人：@dev
   - 预估：0.5h
