@@ -65,7 +65,7 @@ func ReverseInferSource(projectDir string) (string, error) {
 			return "", fmt.Errorf("read wrapper config: %w", err)
 		}
 
-		distributionURL := extractDistributionURL(string(data))
+		distributionURL := ExtractDistributionURL(string(data))
 		if distributionURL == "" {
 			continue
 		}
@@ -86,7 +86,7 @@ func wrapperCandidates(projectDir string) []string {
 	}
 }
 
-func extractDistributionURL(content string) string {
+func ExtractDistributionURL(content string) string {
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)

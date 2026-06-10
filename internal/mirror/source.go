@@ -9,8 +9,6 @@ type Source struct {
 	MavenURL    string
 }
 
-type MirrorSource = Source
-
 var BuiltinSources = []Source{
 	{
 		Name:        "official",
@@ -58,10 +56,6 @@ func Names() []string {
 		names = append(names, BuiltinSources[i].Name)
 	}
 	return names
-}
-
-func GetSourceNames() []string {
-	return Names()
 }
 
 func SourceFromDistributionURL(distributionURL string) *Source {
