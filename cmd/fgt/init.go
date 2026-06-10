@@ -35,6 +35,10 @@ func newInitCommand() *cobra.Command {
 				return err
 			}
 
+			if source.Name == "official" {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: official source uses overseas servers, download speed may be slow")
+			}
+
 			if !wrapperOnly {
 				if err := rewriteWrapperFile(projectDir, *source); err != nil {
 					return err

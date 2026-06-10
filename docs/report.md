@@ -186,9 +186,8 @@ flutter-gradle-tool/
 ├── internal/
 │   ├── mirror/
 │   │   ├── source.go                 # 镜像源数据结构 + 内置列表
-│   │   ├── set.go                    # 切换镜像核心逻辑
+│   │   ├── config.go                 # 读写 .fgt-config 持久化文件、反向推断镜像源
 │   │   ├── test.go                   # 镜像源测速逻辑
-│   │   └── manager.go                # 读写 .fgt-config 持久化文件
 │   ├── gradle/
 │   │   ├── wrapper.go                # 解析/修改 gradle-wrapper.properties
 │   │   ├── maven.go                  # 修改 build.gradle 镜像配置
@@ -210,7 +209,7 @@ flutter-gradle-tool/
 在 `internal/mirror/source.go` 中定义：
 
 ```go
-type MirrorSource struct {
+type Source struct {
     Name        string // 内部标识，如 "aliyun"
     DisplayName string // 显示名称
     GradleURL   string // Gradle 分发基础 URL，不含版本和尾部斜杠
@@ -221,11 +220,11 @@ type MirrorSource struct {
 预定义全局列表：
 
 ```go
-var BuiltinSources = []MirrorSource{
-    {"official", "Official (services.gradle.org)", "https://services.gradle.org/distributions", ""},
-    {"tencent", "Tencent Cloud", "https://mirrors.cloud.tencent.com/gradle", "https://mirrors.cloud.tencent.com/nexus/repository/maven-public/"},
-    {"aliyun", "Aliyun", "https://mirrors.aliyun.com/maven/gradle", "https://maven.aliyun.com/repository/public"},
-    {"huaweicloud", "Huawei Cloud", "https://mirrors.huaweicloud.com/gradle", "https://mirrors.huaweicloud.com/repository/maven/"},
+var BuiltinSources = []Source{
+    {Name: "official", DisplayName: "Official (services.gradle.org)", GradleURL: "https://services.gradle.org/distributions", MavenURL: ""},
+    {Name: "tencent", DisplayName: "Tencent Cloud", GradleURL: "https://mirrors.cloud.tencent.com/gradle", MavenURL: "https://mirrors.cloud.tencent.com/nexus/repository/maven-public/"},
+    {Name: "aliyun", DisplayName: "Aliyun", GradleURL: "https://mirrors.aliyun.com/maven/gradle", MavenURL: "https://maven.aliyun.com/repository/public"},
+    {Name: "huaweicloud", DisplayName: "Huawei Cloud", GradleURL: "https://mirrors.huaweicloud.com/gradle", MavenURL: "https://mirrors.huaweicloud.com/repository/maven/"},
 }
 ```
 

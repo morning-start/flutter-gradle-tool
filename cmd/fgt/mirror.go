@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/mirror"
 )
 
@@ -71,6 +72,10 @@ func newMirrorSetCommand() *cobra.Command {
 			source, err := resolveSource(cmd, sourceName, interactive, false)
 			if err != nil {
 				return err
+			}
+
+			if source.Name == "official" {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: official source uses overseas servers, download speed may be slow")
 			}
 
 			if !wrapperOnly {
@@ -136,7 +141,22 @@ func newMirrorTestCommand() *cobra.Command {
 			for _, result := range results {
 				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", result.Source.Name, result.Status, result.Duration, result.TestedURL)
 			}
-			return tw.Flush()
+			if err := tw.Flush(); err != nil {
+				return err
+			}
+
+			allFailed := true
+			for _, r := range results {
+				if r.OK {
+					allFailed = false
+					break
+				}
+			}
+			if allFailed {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "all mirror sources are unreachable, check your network")
+				return errors.New(errors.ExitNetwork, "all mirror sources unreachable")
+			}
+			return nil
 		},
 	}
 }
