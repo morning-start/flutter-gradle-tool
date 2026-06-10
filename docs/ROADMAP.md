@@ -100,8 +100,8 @@ related_docs:
 - [x] `internal/cache/cache.go`
 - [x] `internal/doctor/doctor.go`
 - [x] `internal/gradle/build.go`（exec 逻辑）
-- [ ] Windows 兼容性适配
-- [ ] 跨平台 CI 测试
+- [x] Windows 兼容性适配
+- [ ] 跨平台 CI 测试（待 GitHub Actions 配置）
 
 ---
 

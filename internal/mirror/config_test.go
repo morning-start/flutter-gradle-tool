@@ -60,3 +60,44 @@ func TestReverseInferSourceFromWrapper(t *testing.T) {
 		t.Fatalf("ReverseInferSource() = %q, want %q", got, "aliyun")
 	}
 }
+
+func TestReverseInferSource_CRLF(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	wrapperDir := filepath.Join(projectDir, "android", "gradle", "wrapper")
+	if err := os.MkdirAll(wrapperDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	content := "distributionUrl=https\\://mirrors.aliyun.com/maven/gradle/gradle-8.5-all.zip\r\n"
+	if err := os.WriteFile(filepath.Join(wrapperDir, "gradle-wrapper.properties"), []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	got, err := mirror.ReverseInferSource(projectDir)
+	if err != nil {
+		t.Fatalf("ReverseInferSource() error = %v", err)
+	}
+	if got != "aliyun" {
+		t.Fatalf("ReverseInferSource() = %q, want %q", got, "aliyun")
+	}
+}
+
+func TestLoadConfig_CRLF(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	content := "{\"source\":\"aliyun\"}\r\n"
+	if err := os.WriteFile(mirror.ConfigPath(projectDir), []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	got, err := mirror.LoadConfig(projectDir)
+	if err != nil {
+		t.Fatalf("LoadConfig() error = %v", err)
+	}
+	if got != "aliyun" {
+		t.Fatalf("LoadConfig() = %q, want %q", got, "aliyun")
+	}
+}

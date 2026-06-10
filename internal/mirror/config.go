@@ -87,6 +87,7 @@ func wrapperCandidates(projectDir string) []string {
 }
 
 func extractDistributionURL(content string) string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "distributionUrl=") {

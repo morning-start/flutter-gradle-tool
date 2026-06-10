@@ -69,7 +69,7 @@ func SourceFromDistributionURL(distributionURL string) *Source {
 		return nil
 	}
 
-	normalizedURL := strings.ReplaceAll(distributionURL, `\`, "")
+	normalizedURL := strings.ReplaceAll(distributionURL, `\://`, `://`)
 	for i := range BuiltinSources {
 		if strings.Contains(normalizedURL, BuiltinSources[i].GradleURL) {
 			return &BuiltinSources[i]
