@@ -1,0 +1,74 @@
+# GoReleaser configuration for flutter-gradle-tool
+# https://goreleaser.com
+---
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: fgt
+    main: ./cmd/fgt/
+    binary: fgt
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 7
+    ignore:
+      - goos: darwin
+        goarch: arm64
+        goarm: 7
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- tolower .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - docs/*.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: '{{ .Tag }}-next'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+
+release:
+  prerelease: auto
+  header: |
+    ## flutter-gradle-tool {{ .Version }}
+
+    CLI for speeding up Flutter Android builds by managing Gradle wrapper and Maven mirror settings.
+
+    ### Downloads
+    Pre-built binaries for Linux, macOS, and Windows (amd64 + arm64) are attached below.
+
+  footer: |
+    ---
+    _Built with GoReleaser_

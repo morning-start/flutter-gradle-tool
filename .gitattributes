@@ -1,0 +1,24 @@
+# Go source — always LF
+*.go text eol=lf
+
+# Scripts — keep platform-native
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.sh text eol=lf
+
+# Markdown / YAML / JSON — always LF
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+# Go modules
+go.mod text eol=lf
+go.sum text eol=lf
+
+# License
+LICENSE text eol=lf
+
+# Binary artifacts
+*.exe binary
+*.zip binary
