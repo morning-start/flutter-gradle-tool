@@ -149,11 +149,8 @@ func newInitCommand() *cobra.Command {
 			if ciMode && sourceName == "" {
 				return errors.New(errors.ExitCIRequiresSource, "--ci requires --source")
 			}
-			if interactive {
-				return errors.New(errors.ExitUnknownCommand, "interactive init is not implemented yet")
-			}
 
-			source, err := resolveInitSource(projectDir, sourceName)
+			source, err := resolveInitSource(cmd, projectDir, sourceName, interactive)
 			if err != nil {
 				return err
 			}
@@ -183,13 +180,17 @@ func newInitCommand() *cobra.Command {
 	return cmd
 }
 
-func resolveInitSource(projectDir, sourceName string) (*mirror.Source, error) {
+func resolveInitSource(cmd *cobra.Command, projectDir, sourceName string, interactive bool) (*mirror.Source, error) {
 	if sourceName != "" {
 		source := mirror.FindByName(sourceName)
 		if source == nil {
 			return nil, errors.New(errors.ExitUnknownSource, fmt.Sprintf("unknown mirror source: %s", sourceName))
 		}
 		return source, nil
+	}
+
+	if interactive {
+		return chooseMirrorSourceInteractively(cmd)
 	}
 
 	if current, err := mirror.CurrentSource(projectDir); err != nil {
@@ -334,10 +335,6 @@ func newMirrorSetCommand() *cobra.Command {
 			source, err := resolveMirrorSetSource(cmd, sourceName, interactive)
 			if err != nil {
 				return err
-			}
-
-			if wrapperOnly || mavenOnly {
-				// P1 scope only persists selection. File mutation will be added in P2.
 			}
 
 			return mirror.SaveConfig(projectDir, source.Name)

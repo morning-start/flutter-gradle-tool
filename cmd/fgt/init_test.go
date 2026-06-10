@@ -67,6 +67,35 @@ func TestInitOfficialRemovesMavenBlocks(t *testing.T) {
 	}
 }
 
+func TestInitInteractive(t *testing.T) {
+	projectDir := t.TempDir()
+	writeFlutterProjectFiles(t, projectDir)
+
+	in := strings.NewReader("3\ny\n")
+	out := &bytes.Buffer{}
+	cmd := newRootCommand()
+	cmd.SetIn(in)
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"--project-dir", projectDir, "init", "--interactive"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("interactive init returned error: %v\noutput:\n%s", err, out.String())
+	}
+
+	buildGradle := readTestFile(t, filepath.Join(projectDir, "android", "build.gradle"))
+	if strings.Count(buildGradle, "Added by fgt") != 2 {
+		t.Fatalf("build.gradle marker count = %d, want 2\n%s", strings.Count(buildGradle, "Added by fgt"), buildGradle)
+	}
+	if !strings.Contains(buildGradle, "maven { url 'https://maven.aliyun.com/repository/public' }") {
+		t.Fatalf("build.gradle missing maven mirror block:\n%s", buildGradle)
+	}
+
+	config := readTestFile(t, filepath.Join(projectDir, ".fgt-config"))
+	if !strings.Contains(config, `"source":"aliyun"`) {
+		t.Fatalf("config not saved:\n%s", config)
+	}
+}
+
 func TestInitRewritesBuildGradleKTS(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFlutterProjectFilesKTS(t, projectDir)
