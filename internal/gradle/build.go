@@ -9,6 +9,17 @@ import (
 	apperrors "flutter-gradle-tool/internal/errors"
 )
 
+func GradleUserHome() string {
+	if env := os.Getenv("GRADLE_USER_HOME"); env != "" {
+		return env
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".gradle"
+	}
+	return filepath.Join(home, ".gradle")
+}
+
 func RunGradle(projectDir string, tasks []string) (string, error) {
 	if len(tasks) == 0 {
 		return "", apperrors.New(apperrors.ExitUnknownCommand, "at least one gradle task is required")
@@ -27,6 +38,7 @@ func RunGradle(projectDir string, tasks []string) (string, error) {
 		cmd = exec.Command("./"+wrapperName, tasks...)
 	}
 	cmd.Dir = wrapperDir
+	cmd.Env = append(os.Environ(), "GRADLE_USER_HOME="+GradleUserHome())
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
