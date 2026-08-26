@@ -19,14 +19,14 @@ import (
 
 func newInitCommand() *cobra.Command {
 	var (
-		sourceName   string
-		wrapperOnly  bool
-		mavenOnly    bool
-		ciMode       bool
-		interactive  bool
-		miseMode     bool
-		restoreMode  bool
-		cleanZip     bool
+		sourceName  string
+		wrapperOnly bool
+		mavenOnly   bool
+		ciMode      bool
+		interactive bool
+		miseMode    bool
+		restoreMode bool
+		cleanZip    bool
 	)
 
 	cmd := &cobra.Command{
@@ -60,11 +60,6 @@ func newInitCommand() *cobra.Command {
 
 // --- restore mode ---
 
-// runRestore undoes all fgt modifications to make the project safe for CI/CD:
-//  1. Restores gradle-wrapper.properties to git HEAD version
-//  2. Removes fgt-injected Maven mirror blocks from build.gradle
-//  3. Deletes .fgt-config
-//  4. Optionally removes mise-generated local zip files
 func runRestore(cmd *cobra.Command, projectDir string, cleanZip bool) error {
 	out := cmd.ErrOrStderr()
 	var restored int
@@ -135,9 +130,7 @@ func runRestore(cmd *cobra.Command, projectDir string, cleanZip bool) error {
 	return nil
 }
 
-// gitShowHEAD runs `git show HEAD:<path>` to get the committed version of a file.
 func gitShowHEAD(absPath string) (string, error) {
-	// Find the git root by walking up.
 	dir := filepath.Dir(absPath)
 	for i := 0; i < 10; i++ {
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
@@ -156,15 +149,13 @@ func gitShowHEAD(absPath string) (string, error) {
 	}
 	relPath = filepath.ToSlash(relPath)
 
-	cmd := fmt.Sprintf("git show HEAD:%s", relPath)
 	out, err := execCommand(dir, "git", "show", "HEAD:"+relPath)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", cmd, err)
+		return "", fmt.Errorf("git show HEAD:%s: %w", relPath, err)
 	}
 	return out, nil
 }
 
-// execCommand runs a command in the given directory and returns stdout.
 func execCommand(dir, name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
@@ -175,27 +166,22 @@ func execCommand(dir, name string, args ...string) (string, error) {
 	return string(output), nil
 }
 
-// cleanMiseZips removes mise-generated gradle-*.zip files from mise install directories.
 func cleanMiseZips(projectDir string) (int, error) {
 	if !mise.IsMiseInstalled() {
 		return 0, nil
 	}
-
 	info, err := mise.DetectGradle(projectDir)
 	if err != nil || info == nil || info.InstallDir == "" {
 		return 0, nil
 	}
-
 	var removed int
-	entries, _ := os.ReadDir(info.InstallDir)
-	for _, e := range entries {
+	for _, e := range mustReadDir(info.InstallDir) {
 		if e.IsDir() {
 			continue
 		}
 		name := e.Name()
 		if strings.HasPrefix(name, "gradle-") && strings.HasSuffix(name, ".zip") {
-			path := filepath.Join(info.InstallDir, name)
-			if err := os.Remove(path); err == nil {
+			if os.Remove(filepath.Join(info.InstallDir, name)) == nil {
 				removed++
 			}
 		}
@@ -203,20 +189,9 @@ func cleanMiseZips(projectDir string) (int, error) {
 	return removed, nil
 }
 
-// findBuildGradlePath locates the build.gradle or build.gradle.kts file.
-func findBuildGradlePath(projectDir string) (string, error) {
-	return firstExistingPath(
-		filepath.Join(projectDir, "android", "build.gradle.kts"),
-		filepath.Join(projectDir, "build.gradle.kts"),
-		filepath.Join(projectDir, "android", "build.gradle"),
-		filepath.Join(projectDir, "build.gradle"),
-	)
-}
-
 // --- mirror mode ---
 
 func runMirrorInit(cmd *cobra.Command, projectDir, sourceName string, interactive, wrapperOnly, mavenOnly bool) error {
-
 	source, err := resolveSource(cmd, sourceName, interactive, true)
 	if err != nil {
 		return err
@@ -236,7 +211,10 @@ func runMirrorInit(cmd *cobra.Command, projectDir, sourceName string, interactiv
 			return err
 		}
 	}
-	return mirror.SaveConfig(projectDir, source.Name)
+	if err := mirror.SaveConfig(projectDir, source.Name); err != nil {
+		return err
+	}
+	return nil
 }
 
 // --- mise mode ---
@@ -275,9 +253,6 @@ func runMiseInit(cmd *cobra.Command, projectDir string, wrapperOnly, mavenOnly b
 	return nil
 }
 
-// rewriteWrapperForMise sets distributionUrl to a file:// URL pointing to a
-// local zip created from the mise Gradle home directory. The zip is cached
-// and reused on subsequent runs.
 func rewriteWrapperForMise(projectDir string, info *mise.GradleInfo) error {
 	if info.GradleHome == "" {
 		return errors.New(errors.ExitWrapperParse, "no extracted Gradle directory found from mise")
@@ -293,7 +268,6 @@ func rewriteWrapperForMise(projectDir string, info *mise.GradleInfo) error {
 		return fmt.Errorf("read wrapper file: %w", err)
 	}
 
-	// Ensure a local zip exists.
 	zipPath := info.ZipPath
 	if zipPath == "" {
 		_, distType, _ := gradle.ParseWrapperDistributionURL(string(wrapperContent))
@@ -318,14 +292,11 @@ func rewriteWrapperForMise(projectDir string, info *mise.GradleInfo) error {
 	return nil
 }
 
-// ensureLocalZip creates a zip from the extracted Gradle home if one
-// doesn't already exist. Uses Go's native archive/zip for portability.
 func ensureLocalZip(gradleHome, version, distType string) (string, error) {
 	zipPath := filepath.Join(filepath.Dir(gradleHome), fmt.Sprintf("gradle-%s-%s.zip", version, distType))
 	if _, err := os.Stat(zipPath); err == nil {
 		return zipPath, nil
 	}
-
 	fmt.Fprintf(os.Stderr, "creating local gradle zip from %s ...\n", gradleHome)
 	if err := createZipFromDir(gradleHome, zipPath); err != nil {
 		return "", fmt.Errorf("create zip: %w", err)
@@ -333,8 +304,6 @@ func ensureLocalZip(gradleHome, version, distType string) (string, error) {
 	return zipPath, nil
 }
 
-// createZipFromDir creates a zip archive from a directory. The directory
-// itself becomes the top-level entry (e.g., "gradle-8.14.5/").
 func createZipFromDir(sourceDir, zipPath string) error {
 	f, err := os.Create(zipPath)
 	if err != nil {
@@ -351,7 +320,6 @@ func createZipFromDir(sourceDir, zipPath string) error {
 		if err != nil {
 			return err
 		}
-
 		relPath, err := filepath.Rel(sourceDir, path)
 		if err != nil {
 			return err
@@ -374,7 +342,6 @@ func createZipFromDir(sourceDir, zipPath string) error {
 		if err != nil {
 			return err
 		}
-
 		src, err := os.Open(path)
 		if err != nil {
 			return err
@@ -396,17 +363,38 @@ func findWrapperPath(projectDir string) (string, error) {
 	)
 }
 
+func findBuildGradlePath(projectDir string) (string, error) {
+	return firstExistingPath(
+		filepath.Join(projectDir, "android", "build.gradle.kts"),
+		filepath.Join(projectDir, "build.gradle.kts"),
+		filepath.Join(projectDir, "android", "build.gradle"),
+		filepath.Join(projectDir, "build.gradle"),
+	)
+}
+
+func findGitRoot(dir string) string {
+	for i := 0; i < 20; i++ {
+		if info, err := os.Stat(filepath.Join(dir, ".git")); err == nil && info.IsDir() {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+	return ""
+}
+
 func rewriteWrapperFile(projectDir string, source mirror.Source) error {
 	path, err := findWrapperPath(projectDir)
 	if err != nil {
 		return err
 	}
-
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read wrapper file: %w", err)
 	}
-
 	updated, changed, err := gradle.RewriteWrapperProperties(string(content), source)
 	if err != nil {
 		return err
@@ -422,14 +410,12 @@ func rewriteWrapperFile(projectDir string, source mirror.Source) error {
 func rewriteBuildGradleFile(projectDir string, source mirror.Source) error {
 	path, err := findBuildGradlePath(projectDir)
 	if err != nil {
-		return nil // build.gradle is optional
+		return nil
 	}
-
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read build.gradle: %w", err)
 	}
-
 	var updated string
 	var changed bool
 	if strings.HasSuffix(path, ".kts") {
@@ -455,4 +441,9 @@ func firstExistingPath(paths ...string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("required file not found")
+}
+
+func mustReadDir(dir string) []os.DirEntry {
+	entries, _ := os.ReadDir(dir)
+	return entries
 }
