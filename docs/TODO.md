@@ -1,9 +1,9 @@
 ---
 title: flutter-gradle-tool P1 TODO
 doc_type: todo
-version: 0.2.0
+version: 0.3.0
 status: in_progress
-updated: 2026-06-10
+updated: 2026-08-26
 related_docs:
   - report.md
   - ROADMAP.md
@@ -214,6 +214,28 @@ related_docs:
   - 预估：2h
 - [x] **10.2 单元测试 — 镜像测速** — 覆盖成功、失败和排序行为
   - 依赖：10.1
+  - 负责人：@dev
+  - 预估：1h
+
+### 12. mise 集成（P6 · 新增 · 1 天）
+
+- [x] **12.1 实现 `internal/mise` 包** — 检测 mise 安装、查询 Gradle 版本、查找本地分发 zip
+  - 负责人：@dev
+  - 预估：2h
+- [x] **12.2 实现 `RewriteWrapperPropertiesToLocal`** — 将 wrapper distributionUrl 改为 file:// 本地路径
+  - 依赖：12.1
+  - 负责人：@dev
+  - 预估：1h
+- [x] **12.3 添加 `fgt init --mise` 标志** — 自动检测 mise 管理的 Gradle 并配置本地分发
+  - 依赖：12.1、12.2
+  - 负责人：@dev
+  - 预估：1h
+- [x] **12.4 doctor 命令集成 mise 检测** — 报告 mise 安装状态、Gradle 版本、本地 zip 可用性
+  - 依赖：12.1
+  - 负责人：@dev
+  - 预估：0.5h
+- [x] **12.5 单元测试** — mise 包测试（zip 查找、URL 构建）+ wrapper 本地重写测试
+  - 依赖：12.1、12.2
   - 负责人：@dev
   - 预估：1h
 

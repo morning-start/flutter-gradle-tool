@@ -2,6 +2,7 @@ package gradle
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -61,4 +62,48 @@ func restoreOriginalLineEndings(original, updated string) string {
 		return strings.ReplaceAll(updated, "\n", "\r\n")
 	}
 	return updated
+}
+
+// RewriteWrapperPropertiesToLocal rewrites the distributionUrl in
+// gradle-wrapper.properties to point to a local file:// URL. This is
+// used when mise manages a local Gradle distribution. The distType
+// parameter should match the existing type (e.g., "all" or "bin").
+func RewriteWrapperPropertiesToLocal(content, localZipPath, distType string) (string, bool, error) {
+	normalized := normalizeWrapperContent(content)
+	matches := wrapperPattern.FindStringSubmatch(normalized)
+	if len(matches) != 4 {
+		return "", false, apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
+	}
+
+	version := matches[2]
+	// Build a file:// URL pointing to the local zip.
+	targetURL := buildLocalDistributionURL(localZipPath, version, distType)
+	currentURL := normalizeDistributionURL(matches[1])
+	if currentURL == targetURL {
+		return content, false, nil
+	}
+
+	replacement := "distributionUrl=" + escapeDistributionURL(targetURL)
+	updated := wrapperPattern.ReplaceAllString(normalized, replacement)
+	return restoreOriginalLineEndings(content, updated), true, nil
+}
+
+func buildLocalDistributionURL(zipPath, version, distType string) string {
+	// Convert Windows backslashes to forward slashes for the URL.
+	slashPath := strings.ReplaceAll(filepath.ToSlash(zipPath), `\`, "/")
+	// Normalize: ensure exactly one leading slash after file://
+	// On Unix, the path already starts with /, so file:///path works.
+	// On Windows, the path might be C:/..., so we need file:///C:/...
+	var url string
+	if strings.HasPrefix(slashPath, "/") {
+		url = "file://" + slashPath
+	} else {
+		url = "file:///" + slashPath
+	}
+	// If the zip path already contains the version and type, use it directly.
+	if strings.Contains(filepath.Base(zipPath), "gradle-"+version+"-"+distType) {
+		return url
+	}
+	// Otherwise append the expected filename.
+	return fmt.Sprintf("%s/gradle-%s-%s.zip", strings.TrimRight(url, "/"), version, distType)
 }

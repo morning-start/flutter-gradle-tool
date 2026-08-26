@@ -115,6 +115,14 @@ Flags for `set`:
   --interactive   Interactive selection (default if no --source given)
   --project-dir   Path to Flutter project root (default: current directory)
   --ci            Non-interactive mode (must provide --source)
+
+Flags for `init`:
+  --mise          Use mise-managed local Gradle distribution (file:// URL)
+  --source        Mirror source name
+  --wrapper-only  Only change wrapper mirror
+  --maven-only    Only change Maven mirror
+  --interactive   Interactive selection
+  --ci            Non-interactive mode
 ```
 
 **示例用法**：
@@ -138,7 +146,23 @@ fgt mirror set --source huaweicloud --maven-only
 
 ### 2.5 工作流程示例
 
-**本地开发**：
+**本地开发（使用 mise 管理 Gradle）**：
+
+```bash
+# 假设已通过 mise 安装了 Gradle
+mise use gradle@8.5
+
+# 使用 mise 本地分发初始化（零网络下载）
+fgt init --mise
+
+# 查看诊断信息（会显示 mise 状态）
+fgt doctor
+
+# 构建（自动使用本地 Gradle 分发）
+fgt exec build
+```
+
+**本地开发（使用镜像源）**：
 
 ```bash
 # 首次初始化，交互式选择镜像源

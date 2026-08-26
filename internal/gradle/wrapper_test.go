@@ -72,3 +72,82 @@ func TestParseWrapperDistributionURLError(t *testing.T) {
 		t.Fatalf("ParseWrapperDistributionURL() error = nil, want error")
 	}
 }
+
+func TestRewriteWrapperPropertiesToLocal(t *testing.T) {
+	t.Parallel()
+
+	input := "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-all.zip\n"
+	zipPath := "/home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-all.zip"
+
+	got, changed, err := RewriteWrapperPropertiesToLocal(input, zipPath, "all")
+	if err != nil {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() error = %v", err)
+	}
+	if !changed {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() changed = false, want true")
+	}
+
+	want := "distributionUrl=file\\:///home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-all.zip"
+	if !strings.Contains(got, want) {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() = %q, want to contain %q", got, want)
+	}
+}
+
+func TestRewriteWrapperPropertiesToLocalIdempotent(t *testing.T) {
+	t.Parallel()
+
+	zipPath := "/home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-all.zip"
+	input := "distributionUrl=file\\:///home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-all.zip\n"
+
+	got, changed, err := RewriteWrapperPropertiesToLocal(input, zipPath, "all")
+	if err != nil {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() error = %v", err)
+	}
+	if changed {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() changed = true, want false")
+	}
+	if got != input {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() = %q, want %q", got, input)
+	}
+}
+
+func TestRewriteWrapperPropertiesToLocalBin(t *testing.T) {
+	t.Parallel()
+
+	input := "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-bin.zip\n"
+	zipPath := "/home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-bin.zip"
+
+	got, changed, err := RewriteWrapperPropertiesToLocal(input, zipPath, "bin")
+	if err != nil {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() error = %v", err)
+	}
+	if !changed {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() changed = false, want true")
+	}
+
+	want := "distributionUrl=file\\:///home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-bin.zip"
+	if !strings.Contains(got, want) {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() = %q, want to contain %q", got, want)
+	}
+}
+
+func TestRewriteWrapperPropertiesToLocalCRLF(t *testing.T) {
+	t.Parallel()
+
+	input := "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-all.zip\r\n"
+	zipPath := "/home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-all.zip"
+
+	got, changed, err := RewriteWrapperPropertiesToLocal(input, zipPath, "all")
+	if err != nil {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() error = %v", err)
+	}
+	if !changed {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() changed = false, want true")
+	}
+
+	// The output uses escaped :// as \:// in the properties file format.
+	want := "distributionUrl=file\\:///home/user/.local/share/mise/installs/gradle/8.5/gradle-8.5-all.zip"
+	if !strings.Contains(got, want) {
+		t.Fatalf("RewriteWrapperPropertiesToLocal() = %q, want to contain %q", got, want)
+	}
+}

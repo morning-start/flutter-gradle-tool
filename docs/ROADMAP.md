@@ -139,6 +139,24 @@ related_docs:
 - [x] 根命令退出码映射
 - [ ] 跨平台验证脚本
 
+### P6：mise 集成（第 13 周）
+
+**目标**：集成 mise（版本管理器）支持，允许使用本地管理的 Gradle 分发包，消除网络下载依赖。
+
+| 关键结果 | 衡量标准 |
+|----------|----------|
+| KR1: mise 检测 | 自动检测 mise 安装状态和管理的 Gradle 版本 |
+| KR2: 本地分发配置 | `fgt init --mise` 将 wrapper 改为 file:// 本地路径 |
+| KR3: doctor 集成 | `fgt doctor` 报告 mise 状态和本地 zip 可用性 |
+| KR4: 幂等性 | 重复执行不产生重复修改 |
+
+**交付物**：
+- [x] `internal/mise/mise.go` — mise 检测与 Gradle 本地分发查找
+- [x] `internal/gradle/wrapper.go` — `RewriteWrapperPropertiesToLocal` 函数
+- [x] `fgt init --mise` 标志
+- [x] `fgt doctor` mise 状态报告
+- [x] 单元测试覆盖
+
 ---
 
 ## 风险与缓解

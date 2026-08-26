@@ -9,16 +9,22 @@ import (
 	apperrors "flutter-gradle-tool/internal/errors"
 	"flutter-gradle-tool/internal/gradle"
 	"flutter-gradle-tool/internal/mirror"
+	"flutter-gradle-tool/internal/mise"
 )
 
 type Report struct {
 	ProjectDir         string
 	WrapperPath        string
 	WrapperSource      string
+	WrapperIsLocal     bool
 	BuildScriptPath    string
 	BuildScriptMirrors bool
 	ConfigPath         string
 	ConfigSource       string
+	MiseInstalled      bool
+	MiseGradleVersion  string
+	MiseZipPath        string
+	MiseAvailable      bool
 	Issues             []string
 }
 
@@ -80,6 +86,25 @@ func Check(projectDir string) (Report, error) {
 		report.Issues = append(report.Issues, "Maven mirror blocks are missing")
 	}
 
+	// Check mise integration.
+	report.MiseInstalled = mise.IsMiseInstalled()
+	if report.MiseInstalled {
+		if info, err := mise.DetectGradle(); err == nil && info != nil {
+			report.MiseGradleVersion = info.Version
+			report.MiseZipPath = info.ZipPath
+			report.MiseAvailable = info.Available
+		}
+	}
+
+	// Check if wrapper uses a local file:// URL.
+	if report.WrapperPath != "" {
+		wrapperData, err := os.ReadFile(report.WrapperPath)
+		if err == nil {
+			url := mirror.ExtractDistributionURL(string(wrapperData))
+			report.WrapperIsLocal = strings.HasPrefix(url, "file:")
+		}
+	}
+
 	return report, nil
 }
 
@@ -96,6 +121,9 @@ func Format(report Report) string {
 	} else {
 		fmt.Fprintf(&b, "wrapper: %s\n", report.WrapperSource)
 	}
+	if report.WrapperIsLocal {
+		b.WriteString("wrapper mode: local (file://)\n")
+	}
 	if report.BuildScriptPath == "" {
 		b.WriteString("build script: missing\n")
 	} else if report.BuildScriptMirrors {
@@ -103,6 +131,24 @@ func Format(report Report) string {
 	} else {
 		fmt.Fprintf(&b, "%s: mirrors absent\n", filepath.Base(report.BuildScriptPath))
 	}
+
+	// Mise section.
+	if report.MiseInstalled {
+		b.WriteString("mise: installed\n")
+		if report.MiseGradleVersion != "" {
+			fmt.Fprintf(&b, "mise gradle: %s\n", report.MiseGradleVersion)
+			if report.MiseAvailable {
+				fmt.Fprintf(&b, "mise local zip: %s\n", report.MiseZipPath)
+			} else {
+				b.WriteString("mise local zip: not found\n")
+			}
+		} else {
+			b.WriteString("mise gradle: not managed\n")
+		}
+	} else {
+		b.WriteString("mise: not installed\n")
+	}
+
 	if len(report.Issues) == 0 {
 		b.WriteString("status: ok\n")
 	} else {
