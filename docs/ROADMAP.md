@@ -33,10 +33,12 @@ related_docs:
 
 | 阶段 | 名称 | 时间 | 交付物 | 状态 |
 |------|------|------|--------|------|
-| P1 | 项目骨架与镜像管理核心 | 第 1-3 周 | CLI 框架 + 镜像源 CRUD | **进行中** |
-| P2 | Gradle 配置操作 | 第 4-6 周 | init 命令 + wrapper/Maven 修改 | 进行中 |
-| P3 | 辅助命令与平台适配 | 第 7-8 周 | doctor + cache + exec + Windows 兼容 | 进行中 |
-| P4 | 高级功能与发布 | 第 9-11 周 | 测速 + 文档 + 二进制发布 | 进行中 |
+| P1 | 项目骨架与镜像管理核心 | 第 1-3 周 | CLI 框架 + 镜像源 CRUD | **已完成** |
+| P2 | Gradle 配置操作 | 第 4-6 周 | init 命令 + wrapper/Maven 修改 | **已完成** |
+| P3 | 辅助命令与平台适配 | 第 7-8 周 | doctor + cache + exec + Windows 兼容 | **已完成** |
+| P4 | 高级功能与发布 | 第 9-11 周 | 测速 + 文档 + 二进制发布 | **已完成** |
+| P5 | 退出码与流程收口 | 第 12 周 | 错误码统一 + 项目校验 | **已完成** |
+| P6 | mise 集成 | 第 13 周 | 本地 Gradle 分发管理 | **已完成** |
 
 ---
 
@@ -56,11 +58,11 @@ related_docs:
 
 **交付物**：
 - [x] Go 项目初始化（go.mod、目录结构）
-- [ ] MirrorSource 数据结构与内置列表
-- [ ] `mirror list` / `mirror set` / `mirror current` 子命令
-- [ ] `.fgt-config` 持久化读写
-- [ ] 退出码定义与错误提示
-- [ ] 单元测试套件
+- [x] MirrorSource 数据结构与内置列表
+- [x] `mirror list` / `mirror set` / `mirror current` 子命令
+- [x] `.fgt-config` 持久化读写
+- [x] 退出码定义与错误提示
+- [x] 单元测试套件
 
 ---
 
@@ -101,7 +103,7 @@ related_docs:
 - [x] `internal/doctor/doctor.go`
 - [x] `internal/gradle/build.go`（exec 逻辑）
 - [x] Windows 兼容性适配
-- [ ] 跨平台 CI 测试（待 GitHub Actions 配置）
+- [x] 跨平台 CI 测试（GitHub Actions 三平台 runner）
 
 ---
 
@@ -121,7 +123,7 @@ related_docs:
 - [x] 交互式选择 UI 优化（可选引入 promptui）
 - [x] GitHub Actions CI/CD 配置
 - [x] GoReleaser 发布配置
-- [ ] 用户文档（README、使用示例）
+- [x] 用户文档（README、使用示例）
 
 ### P5：退出码与流程收口（第 12 周）
 
@@ -137,7 +139,7 @@ related_docs:
 - [x] `internal/errors/exitcode.go`
 - [x] `internal/errors/app_error.go`
 - [x] 根命令退出码映射
-- [ ] 跨平台验证脚本
+- [x] 跨平台验证脚本
 
 ### P6：mise 集成（第 13 周）
 
