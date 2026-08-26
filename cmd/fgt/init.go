@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -18,18 +19,23 @@ import (
 
 func newInitCommand() *cobra.Command {
 	var (
-		sourceName  string
-		wrapperOnly bool
-		mavenOnly   bool
-		ciMode      bool
-		interactive bool
-		miseMode    bool
+		sourceName   string
+		wrapperOnly  bool
+		mavenOnly    bool
+		ciMode       bool
+		interactive  bool
+		miseMode     bool
+		restoreMode  bool
+		cleanZip     bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize Gradle mirror settings for a Flutter project",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if restoreMode {
+				return runRestore(cmd, projectDir, cleanZip)
+			}
 			if ciMode && sourceName == "" {
 				return errors.New(errors.ExitCIRequiresSource, "--ci requires --source")
 			}
@@ -46,13 +52,171 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&ciMode, "ci", false, "Non-interactive mode")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive selection")
 	cmd.Flags().BoolVar(&miseMode, "mise", false, "Use mise-managed local Gradle distribution")
+	cmd.Flags().BoolVar(&restoreMode, "restore", false, "Restore original Gradle settings (undo fgt changes)")
+	cmd.Flags().BoolVar(&cleanZip, "clean-zip", false, "Also remove mise-generated local zip files")
 
 	return cmd
+}
+
+// --- restore mode ---
+
+// runRestore undoes all fgt modifications to make the project safe for CI/CD:
+//  1. Restores gradle-wrapper.properties to git HEAD version
+//  2. Removes fgt-injected Maven mirror blocks from build.gradle
+//  3. Deletes .fgt-config
+//  4. Optionally removes mise-generated local zip files
+func runRestore(cmd *cobra.Command, projectDir string, cleanZip bool) error {
+	out := cmd.ErrOrStderr()
+	var restored int
+
+	// 1. Restore gradle-wrapper.properties from git.
+	if path, err := findWrapperPath(projectDir); err == nil {
+		if gitContent, err := gitShowHEAD(path); err == nil {
+			current, _ := os.ReadFile(path)
+			if string(current) != gitContent {
+				if err := os.WriteFile(path, []byte(gitContent), 0o644); err != nil {
+					return errors.Wrap(errors.ExitPermission, "restore wrapper file", err)
+				}
+				_, _ = fmt.Fprintf(out, "restored: %s\n", path)
+				restored++
+			}
+		} else {
+			_, _ = fmt.Fprintf(out, "skip wrapper restore (not in git or no git): %v\n", err)
+		}
+	}
+
+	// 2. Remove Maven mirror blocks from build.gradle.
+	if path, err := findBuildGradlePath(projectDir); err == nil {
+		content, err := os.ReadFile(path)
+		if err == nil {
+			official := mirror.Source{Name: "official"}
+			var updated string
+			var changed bool
+			if strings.HasSuffix(path, ".kts") {
+				updated, changed, err = gradle.RewriteBuildGradleKTS(string(content), official)
+			} else {
+				updated, changed, err = gradle.RewriteBuildGradle(string(content), official)
+			}
+			if err == nil && changed {
+				if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+					return errors.Wrap(errors.ExitPermission, "restore build.gradle", err)
+				}
+				_, _ = fmt.Fprintf(out, "restored: %s\n", path)
+				restored++
+			}
+		}
+	}
+
+	// 3. Delete .fgt-config.
+	configPath := mirror.ConfigPath(projectDir)
+	if _, err := os.Stat(configPath); err == nil {
+		if err := os.Remove(configPath); err != nil {
+			return errors.Wrap(errors.ExitPermission, "remove .fgt-config", err)
+		}
+		_, _ = fmt.Fprintf(out, "removed: %s\n", configPath)
+		restored++
+	}
+
+	// 4. Optionally clean mise-generated zip files.
+	if cleanZip {
+		if n, err := cleanMiseZips(projectDir); err != nil {
+			_, _ = fmt.Fprintf(out, "warning: clean zip: %v\n", err)
+		} else if n > 0 {
+			_, _ = fmt.Fprintf(out, "removed %d local zip file(s)\n", n)
+			restored += n
+		}
+	}
+
+	if restored == 0 {
+		_, _ = fmt.Fprintln(out, "nothing to restore — project is clean")
+	} else {
+		_, _ = fmt.Fprintf(out, "restored %d item(s)\n", restored)
+	}
+	return nil
+}
+
+// gitShowHEAD runs `git show HEAD:<path>` to get the committed version of a file.
+func gitShowHEAD(absPath string) (string, error) {
+	// Find the git root by walking up.
+	dir := filepath.Dir(absPath)
+	for i := 0; i < 10; i++ {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("not a git repository")
+		}
+		dir = parent
+	}
+
+	relPath, err := filepath.Rel(dir, absPath)
+	if err != nil {
+		return "", err
+	}
+	relPath = filepath.ToSlash(relPath)
+
+	cmd := fmt.Sprintf("git show HEAD:%s", relPath)
+	out, err := execCommand(dir, "git", "show", "HEAD:"+relPath)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", cmd, err)
+	}
+	return out, nil
+}
+
+// execCommand runs a command in the given directory and returns stdout.
+func execCommand(dir, name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
+
+// cleanMiseZips removes mise-generated gradle-*.zip files from mise install directories.
+func cleanMiseZips(projectDir string) (int, error) {
+	if !mise.IsMiseInstalled() {
+		return 0, nil
+	}
+
+	info, err := mise.DetectGradle(projectDir)
+	if err != nil || info == nil || info.InstallDir == "" {
+		return 0, nil
+	}
+
+	var removed int
+	entries, _ := os.ReadDir(info.InstallDir)
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasPrefix(name, "gradle-") && strings.HasSuffix(name, ".zip") {
+			path := filepath.Join(info.InstallDir, name)
+			if err := os.Remove(path); err == nil {
+				removed++
+			}
+		}
+	}
+	return removed, nil
+}
+
+// findBuildGradlePath locates the build.gradle or build.gradle.kts file.
+func findBuildGradlePath(projectDir string) (string, error) {
+	return firstExistingPath(
+		filepath.Join(projectDir, "android", "build.gradle.kts"),
+		filepath.Join(projectDir, "build.gradle.kts"),
+		filepath.Join(projectDir, "android", "build.gradle"),
+		filepath.Join(projectDir, "build.gradle"),
+	)
 }
 
 // --- mirror mode ---
 
 func runMirrorInit(cmd *cobra.Command, projectDir, sourceName string, interactive, wrapperOnly, mavenOnly bool) error {
+
 	source, err := resolveSource(cmd, sourceName, interactive, true)
 	if err != nil {
 		return err
@@ -256,12 +420,7 @@ func rewriteWrapperFile(projectDir string, source mirror.Source) error {
 }
 
 func rewriteBuildGradleFile(projectDir string, source mirror.Source) error {
-	path, err := firstExistingPath(
-		filepath.Join(projectDir, "android", "build.gradle.kts"),
-		filepath.Join(projectDir, "build.gradle.kts"),
-		filepath.Join(projectDir, "android", "build.gradle"),
-		filepath.Join(projectDir, "build.gradle"),
-	)
+	path, err := findBuildGradlePath(projectDir)
 	if err != nil {
 		return nil // build.gradle is optional
 	}
