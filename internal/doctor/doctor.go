@@ -89,7 +89,7 @@ func Check(projectDir string) (Report, error) {
 	// Check mise integration.
 	report.MiseInstalled = mise.IsMiseInstalled()
 	if report.MiseInstalled {
-		if info, err := mise.DetectGradle(); err == nil && info != nil {
+		if info, err := mise.DetectGradle(projectDir); err == nil && info != nil {
 			report.MiseGradleVersion = info.Version
 			report.MiseZipPath = info.ZipPath
 			report.MiseAvailable = info.Available

@@ -96,7 +96,7 @@ func splitLines(content string) ([]string, string) {
 	if strings.Contains(content, "\r\n") {
 		lineEnding = "\r\n"
 	}
-	return strings.Split(normalizeWrapperContent(content), "\n"), lineEnding
+	return strings.Split(normalizeContent(content), "\n"), lineEnding
 }
 
 func joinLines(lines []string, lineEnding string) string {

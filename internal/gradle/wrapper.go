@@ -12,98 +12,75 @@ import (
 
 var wrapperPattern = regexp.MustCompile(`(?m)^distributionUrl\s*=\s*(.+/gradle-(.+)-(all|bin|src)\.zip)\s*$`)
 
-func ParseWrapperDistributionURL(content string) (string, string, error) {
-	matches := wrapperPattern.FindStringSubmatch(normalizeWrapperContent(content))
+// ParseWrapperDistributionURL extracts the Gradle version and distribution
+// type from gradle-wrapper.properties content.
+func ParseWrapperDistributionURL(content string) (version, distType string, err error) {
+	matches := wrapperPattern.FindStringSubmatch(normalizeContent(content))
 	if len(matches) != 4 {
 		return "", "", apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
 	}
 	return matches[2], matches[3], nil
 }
 
+// RewriteWrapperProperties replaces the distributionUrl with a mirror URL
+// from the given source, preserving the version and distribution type.
 func RewriteWrapperProperties(content string, source mirror.Source) (string, bool, error) {
-	normalized := normalizeWrapperContent(content)
+	normalized := normalizeContent(content)
 	matches := wrapperPattern.FindStringSubmatch(normalized)
 	if len(matches) != 4 {
 		return "", false, apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
 	}
 
-	version := matches[2]
-	distType := matches[3]
-	targetURL := buildDistributionURL(source.GradleURL, version, distType)
-	currentURL := normalizeDistributionURL(matches[1])
-	if currentURL == targetURL {
+	targetURL := buildMirrorURL(source.GradleURL, matches[2], matches[3])
+	if normalizeURL(matches[1]) == targetURL {
 		return content, false, nil
 	}
 
-	replacement := "distributionUrl=" + escapeDistributionURL(targetURL)
-	updated := wrapperPattern.ReplaceAllString(normalized, replacement)
-	return restoreOriginalLineEndings(content, updated), true, nil
+	updated := wrapperPattern.ReplaceAllString(normalized, "distributionUrl="+escapeURL(targetURL))
+	return restoreLineEndings(content, updated), true, nil
 }
 
-func buildDistributionURL(baseURL, version, distType string) string {
-	base := strings.TrimRight(baseURL, "/")
-	return fmt.Sprintf("%s/gradle-%s-%s.zip", base, version, distType)
+// RewriteWrapperPropertiesToLocal replaces the distributionUrl with a
+// file:// URL pointing to a local zip file.
+func RewriteWrapperPropertiesToLocal(content, localZipPath string) (string, bool, error) {
+	normalized := normalizeContent(content)
+	matches := wrapperPattern.FindStringSubmatch(normalized)
+	if len(matches) < 2 {
+		return "", false, apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
+	}
+
+	targetURL := buildLocalURL(localZipPath)
+	if normalizeURL(matches[1]) == targetURL {
+		return content, false, nil
+	}
+
+	updated := wrapperPattern.ReplaceAllString(normalized, "distributionUrl="+escapeURL(targetURL))
+	return restoreLineEndings(content, updated), true, nil
 }
 
-func normalizeWrapperContent(content string) string {
-	return strings.ReplaceAll(content, "\r\n", "\n")
+// --- internal helpers ---
+
+func buildMirrorURL(baseURL, version, distType string) string {
+	return fmt.Sprintf("%s/gradle-%s-%s.zip", strings.TrimRight(baseURL, "/"), version, distType)
 }
 
-func normalizeDistributionURL(url string) string {
-	return strings.ReplaceAll(strings.TrimSpace(url), `\://`, "://")
+func buildLocalURL(zipPath string) string {
+	slash := strings.ReplaceAll(filepath.ToSlash(zipPath), `\`, "/")
+	if strings.HasPrefix(slash, "/") {
+		return "file://" + slash
+	}
+	return "file:///" + slash
 }
 
-func escapeDistributionURL(url string) string {
-	return strings.ReplaceAll(url, "://", `\://`)
-}
+func normalizeContent(s string) string { return strings.ReplaceAll(s, "\r\n", "\n") }
 
-func restoreOriginalLineEndings(original, updated string) string {
-	if strings.Contains(original, "\r\n") {
+func normalizeURL(u string) string { return strings.ReplaceAll(strings.TrimSpace(u), `\://`, "://") }
+
+func escapeURL(u string) string { return strings.ReplaceAll(u, "://", `\://`) }
+
+func restoreLineEndings(orig, updated string) string {
+	if strings.Contains(orig, "\r\n") {
 		return strings.ReplaceAll(updated, "\n", "\r\n")
 	}
 	return updated
-}
-
-// RewriteWrapperPropertiesToLocal rewrites the distributionUrl in
-// gradle-wrapper.properties to point to a local file:// URL. This is
-// used when mise manages a local Gradle distribution. The distType
-// parameter should match the existing type (e.g., "all" or "bin").
-func RewriteWrapperPropertiesToLocal(content, localZipPath, distType string) (string, bool, error) {
-	normalized := normalizeWrapperContent(content)
-	matches := wrapperPattern.FindStringSubmatch(normalized)
-	if len(matches) != 4 {
-		return "", false, apperrors.New(apperrors.ExitWrapperParse, "distributionUrl is invalid")
-	}
-
-	version := matches[2]
-	// Build a file:// URL pointing to the local zip.
-	targetURL := buildLocalDistributionURL(localZipPath, version, distType)
-	currentURL := normalizeDistributionURL(matches[1])
-	if currentURL == targetURL {
-		return content, false, nil
-	}
-
-	replacement := "distributionUrl=" + escapeDistributionURL(targetURL)
-	updated := wrapperPattern.ReplaceAllString(normalized, replacement)
-	return restoreOriginalLineEndings(content, updated), true, nil
-}
-
-func buildLocalDistributionURL(zipPath, version, distType string) string {
-	// Convert Windows backslashes to forward slashes for the URL.
-	slashPath := strings.ReplaceAll(filepath.ToSlash(zipPath), `\`, "/")
-	// Normalize: ensure exactly one leading slash after file://
-	// On Unix, the path already starts with /, so file:///path works.
-	// On Windows, the path might be C:/..., so we need file:///C:/...
-	var url string
-	if strings.HasPrefix(slashPath, "/") {
-		url = "file://" + slashPath
-	} else {
-		url = "file:///" + slashPath
-	}
-	// If the zip path already contains the version and type, use it directly.
-	if strings.Contains(filepath.Base(zipPath), "gradle-"+version+"-"+distType) {
-		return url
-	}
-	// Otherwise append the expected filename.
-	return fmt.Sprintf("%s/gradle-%s-%s.zip", strings.TrimRight(url, "/"), version, distType)
 }
